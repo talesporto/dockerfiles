@@ -1,0 +1,21 @@
+version: '3'
+services:
+  dovecot:
+    build: dovecot
+    volumes:
+      - ./data/mail:/var/mail/user/mail
+      - ./data/users:/etc/dovecot/users
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: supersafe123
+      MYSQL_DATABASE: roundcube
+      MYSQL_USER: roundcube
+      MYSQL_PASSWORD: roundcube
+  roundcube:
+    build: roundcube
+    ports:
+      - 8200:80
+    links:
+      - dovecot
+      - db
