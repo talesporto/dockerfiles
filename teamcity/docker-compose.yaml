@@ -1,0 +1,22 @@
+version: '2'
+services:
+  server:
+    image: jetbrains/teamcity-server:2019.1.3-linux
+    ports:
+      - '8111:8111'
+    volumes:
+      - ./data/server/data:/data/teamcity_server/datadir
+      - ./data/server/logs:/opt/teamcity/logs
+  agent:
+    image: jetbrains/teamcity-agent:2019.1.3-linux
+    volumes:
+      - ./data/agent/conf:/data/teamcity_agent/conf
+      - /opt/buildagent/work:/opt/buildagent/work
+      - /opt/buildagent/system/git:/opt/buildagent/system/git
+      - /opt/buildagent/temp:/opt/buildagent/temp
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - AGENT_NAME=AgentSmith
+      - SERVER_URL=http://server:8111/
+    links:
+      - server
