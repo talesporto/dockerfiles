@@ -1,8 +1,9 @@
 FROM microsoft/azure-cli
 
-ARG HELM_VERSION="v2.12.3"
-ARG KUBECTL_VERSION="v1.12.6"
-ARG TERRAFORM_VERSION="0.11.13"
+# Latest kubectl is here: https://storage.googleapis.com/kubernetes-release/release/stable.txt
+ARG KUBECTL_VERSION="v1.17.0"
+ARG HELM_VERSION="v2.16.1"
+ARG TERRAFORM_VERSION="0.12.18"
 
 RUN apk add --no-cache ca-certificates bash curl git \
   && wget -q https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl -O /usr/local/bin/kubectl \
