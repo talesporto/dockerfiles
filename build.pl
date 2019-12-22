@@ -75,6 +75,30 @@ sub hub_set_description {
   }
 }
 
+# Generates the full description for a Docker image.
+# This is run while the current directory is the Docker image's folder,
+# so we check if there is a README.md and if one exists, it is appended to
+# the description.
+sub generate_full_description {
+  my ($folder, $username, $description) = @_;
+  my $full_description = <<HERE;
+$description
+
+[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/Dockerfile)
+
+HERE
+
+  if (-r 'README.md') {
+    open my $fh, '<', 'README.md';
+    while (my $line = <$fh>) {
+      $full_description .= $line;
+    }
+    close $fh;
+  }
+
+  return $full_description;
+}
+
 # Process all subfolders, build and push images
 sub process {
   my ($username, $password) = @_;
@@ -127,6 +151,10 @@ sub process {
       folder      => "swagger-to-diagram",
       description => "Converts Swagger definitions to PlantUML diagrams"
     },
+    {
+      folder      => "vsftpd",
+      description => "FTPS image based on vsftpd"
+    }
   );
 
   my %folder_to_data = map { $_->{folder} => $_ } @data;
@@ -158,17 +186,10 @@ sub process {
     }
 
     # update description
-    my $full_description = <<HERE;
-$data->{description}
-
-[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/Dockerfile)
-
-HERE
-
     hub_set_description(
       jwt_token        => $jwt_token,
       description      => $data->{description},
-      full_description => $full_description,
+      full_description => generate_full_description($folder, $username, $data->{description}),
       username         => $username,
       name             => $name
     );
