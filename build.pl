@@ -168,11 +168,11 @@ sub process {
   foreach my $folder (keys(%folder_to_data)) {
     my $data = $folder_to_data{$folder};
     my $name = $data->{name} || $folder;
+    chdir "$cwd/$folder";
 
     if (grep { /$folder/ } @changed_files) {
       my $fqn = "$username/$name:$date";
       say "Building folder $folder as $fqn";
-      chdir "$cwd/$folder";
       system("docker build -t $fqn .") == 0 or die "could not build image $name";
       system("docker push $fqn") == 0 or die "could not push $fqn";
       if ($is_master) {
