@@ -2,7 +2,7 @@ language: perl
 perl:
 - '5.26'
 install:
-- 
+- cpanm HTTP::Message JSON LWP::UserAgent LWP::Protocol::https
 script: "./build.pl"
 env:
   global:
