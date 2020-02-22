@@ -1,0 +1,16 @@
+#!/usr/bin/bash
+
+DOCKER_OPTIONS=""
+while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
+    -i | --interactive )
+        DOCKER_OPTIONS="-i"
+        ;;
+    * )
+        echo "Unknow flag $1"
+        exit 1
+        ;;
+esac; shift; done
+if [[ "$1" == '--' ]]; then shift; fi
+
+MY_ENV=`declare -px | grep = | sed -e 's/declare -x/--env/g' | cut -d= -f1 | grep -v PATH | tr '\n' ' '`
+docker run --rm $DOCKER_OPTIONS $MY_ENV -v $PWD:/app/basic/:ro gwbasic $1
