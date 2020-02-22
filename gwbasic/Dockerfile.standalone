@@ -1,0 +1,12 @@
+FROM ubuntu
+RUN apt-get update \
+    && apt-get install -y dosbox \
+    && rm -rf /var/lib/apt/lists/*
+ENV SDL_VIDEODRIVER=dummy
+WORKDIR /app
+VOLUME [ "/app/basic" ]
+COPY GWBASIC.EXE .
+COPY *.BAT .
+COPY *.sh .
+ENTRYPOINT ["/app/run-dos-box.sh"]
+CMD ["PROGRAM.BAS"]

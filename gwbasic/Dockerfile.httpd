@@ -1,0 +1,13 @@
+FROM httpd
+RUN apt-get update \
+    && apt-get install -y dosbox \
+    && rm -rf /var/lib/apt/lists/*
+ENV SDL_VIDEODRIVER=dummy
+COPY my-httpd.conf /usr/local/apache2/conf/httpd.conf
+RUN mkdir /app
+RUN chown daemon:www-data /app
+VOLUME [ "/app/basic" ]
+COPY GWBASIC.EXE /app
+COPY *.BAT /app
+COPY *.sh /app
+RUN ln -s /app/run-dos-box.sh /usr/bin/gwbasic
