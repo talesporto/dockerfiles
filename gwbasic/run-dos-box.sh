@@ -21,7 +21,7 @@ cd /app
 grep -v "^#!/" "$FILE" | perl -pe 's/\n/\r\n/g' > PROGRAM.BAS
 
 # save stdin
-cat >STDIN.TXT <&0
+cat | perl -pe 's/\n/\r\n/g' >STDIN.TXT <&0
 
 # save environment variables
 declare -px | grep = | grep -v PATH | sed -e 's/declare -x/SET/g' | tr -d '"' > ENV.BAT
