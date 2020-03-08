@@ -1,17 +1,17 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-    echo "Please specify which file to run"
-    exit 2
+  echo "Please specify which file to run"
+  exit 2
 fi
 
 if [ -r "$1" -a -f "$1" ]; then
-    FILE="$1"
+  FILE="$1"
 elif [ -r "/app/basic/$1" -a -f "/app/basic/$1" ]; then
-    FILE="/app/basic/$1"
+  FILE="/app/basic/$1"
 else
-    echo "File $1 not found"
-    exit 1
+  echo "File $1 not found"
+  exit 1
 fi
 
 # switch to app directory
