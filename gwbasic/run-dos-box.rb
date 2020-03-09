@@ -40,18 +40,21 @@ class Arguments
   def initialize
     @dosbox = nil
     @gwbasic = nil
+    @qbasic = nil
     @needs_stdin = false
     @program = nil
   end
 
   attr_reader :dosbox
   attr_reader :gwbasic
+  attr_reader :qbasic
   attr_reader :needs_stdin
   attr_reader :program
 
   def parse!
     @dosbox = parse_dosbox
     @gwbasic = parse_gwbasic
+    @qbasic = parse_qbasic
     @needs_stdin = parse_needs_stdin
     parse_program
   end
@@ -63,7 +66,11 @@ class Arguments
   end
 
   def parse_gwbasic
-    ENV['GWBASIC'] || 'C:\Users\ngeor\DOSBOX\PROGS\GWBASIC\GWBASIC.EXE'
+    ENV['GWBASIC'] || ''
+  end
+
+  def parse_qbasic
+    ENV['QBASIC'] || ''
   end
 
   def parse_needs_stdin
@@ -88,8 +95,19 @@ end
 class Main
   def initialize(args)
     @args = args
-    @gwbasic_dir = File.dirname(args.gwbasic)
-    @gwbasic_exe = File.basename(args.gwbasic)
+    if !args.gwbasic.empty?
+      @mode = :gwbasic
+      @basic_dir = File.dirname(args.gwbasic)
+      @basic_exe = File.basename(args.gwbasic)
+    elsif !args.qbasic.empty?
+      @mode = :qbasic
+      @basic_dir = File.dirname(args.qbasic)
+      @basic_exe = File.basename(args.qbasic)
+    else
+      warn 'Please specify either GWBASIC or QBASIC env variable'
+      exit!
+    end
+
     @tmp_filename = random_filename
 
     # TODO: support STDIN.TXT with different filename
@@ -99,14 +117,14 @@ class Main
     # the batch file needs to live at the same folder with GWBASIC.EXE,
     # so that DOSBOX mounts it as C:\
     @batch = "#{@tmp_filename}.BAT"
-    @batch_full = join(@gwbasic_dir, @batch)
+    @batch_full = join(@basic_dir, @batch)
     @stdin = 'STDIN.TXT' # TODO: this needs to be varying too
-    @stdin_full = join(@gwbasic_dir, @stdin)
+    @stdin_full = join(@basic_dir, @stdin)
     @stdout = "#{@tmp_filename}.OUT"
-    @stdout_full = join(@gwbasic_dir, @stdout)
+    @stdout_full = join(@basic_dir, @stdout)
     @program_copy = "#{@tmp_filename}.BAS"
-    @program_copy_full = join(@gwbasic_dir, @program_copy)
-    @dosbox_log_full = join(@gwbasic_dir, "#{@tmp_filename}.log")
+    @program_copy_full = join(@basic_dir, @program_copy)
+    @dosbox_log_full = join(@basic_dir, "#{@tmp_filename}.log")
   end
 
   def cleanup
@@ -147,12 +165,19 @@ class Main
   def create_batch_file
     # touch run.bat
     File.open(@batch_full, 'wb') do |f|
-      ENV.each do |k, v|
-        if k != 'PATH' && k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
-          f.print "SET #{k}=#{v}\r\n"
+      if @mode == :gwbasic
+        ENV.each do |k, v|
+          if k != 'PATH' && k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
+            f.print "SET #{k}=#{v}\r\n"
+          end
         end
       end
-      f.print "#{@gwbasic_exe} #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
+
+      if @mode == :gwbasic
+        f.print "#{@basic_exe} #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
+      else
+        f.print "#{@basic_exe} /RUN #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
+      end
     end
   end
 
