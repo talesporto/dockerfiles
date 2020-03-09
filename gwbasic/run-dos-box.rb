@@ -89,6 +89,7 @@ class Main
   def initialize(args)
     @args = args
     @gwbasic_dir = File.dirname(args.gwbasic)
+    @gwbasic_exe = File.basename(args.gwbasic)
     @tmp_filename = random_filename
 
     # TODO: support STDIN.TXT with different filename
@@ -151,7 +152,7 @@ class Main
           f.print "SET #{k}=#{v}\r\n"
         end
       end
-      f.print "GWBASIC.EXE #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
+      f.print "#{@gwbasic_exe} #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
     end
   end
 
