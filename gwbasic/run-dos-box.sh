@@ -1,4 +1,14 @@
 #!/bin/bash
+#
+# Runs the given Basic file with GWBasic in DOSBox.
+# Works standalone and within Docker.
+# Requires STDIN input.
+# BAS files need to be in LF instead of CRLF.
+# Supports shebang lines for BAS files.
+# Passes environment variables to GWBasic.
+# Input output is redirected to STDIN.TXT and STDOUT.TXT.
+#
+# See run-dos-box.rb for an improved version.
 
 if [ -z "$1" ]; then
   echo "Please specify which file to run"

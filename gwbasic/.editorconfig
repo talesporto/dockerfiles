@@ -1,0 +1,5 @@
+root = false
+
+# Files that have shebang must be LF
+[*.{bas,rb,sh}]
+end_of_line = lf

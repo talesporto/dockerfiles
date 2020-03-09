@@ -1,13 +1,21 @@
 FROM httpd
 RUN apt-get update \
-  && apt-get install -y dosbox \
+  && apt-get install -y dosbox ruby \
   && rm -rf /var/lib/apt/lists/*
-ENV SDL_VIDEODRIVER=dummy
 COPY my-httpd.conf /usr/local/apache2/conf/httpd.conf
-RUN mkdir /app
-RUN chown daemon:www-data /app
-VOLUME [ "/app/basic" ]
-COPY GWBASIC.EXE /app
-COPY *.BAT /app
-COPY *.sh /app
-RUN ln -s /app/run-dos-box.sh /usr/bin/gwbasic
+
+# /basic contains the user Basic code
+VOLUME [ "/basic" ]
+
+# /usr/local/gwbasic contains GWBASIC.EXE and the runner script
+RUN mkdir -p /usr/local/gwbasic
+COPY GWBASIC.EXE /usr/local/gwbasic
+COPY run-dos-box.rb /usr/local/gwbasic
+RUN chmod +x /usr/local/gwbasic/run-dos-box.rb
+RUN chown -R daemon:www-data /usr/local/gwbasic
+
+# Override the location of these tools
+ENV DOSBOX=dosbox
+ENV GWBASIC=/usr/local/gwbasic/GWBASIC.EXE
+
+RUN ln -s /usr/local/gwbasic/run-dos-box.rb /usr/bin/gwbasic
