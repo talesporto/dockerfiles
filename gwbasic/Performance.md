@@ -1,5 +1,7 @@
 Performance experiments
 
+# V1 - shell script launcher
+
 ## DOS
 
 Running `RunDOSBox.bat` 100 times from a batch file:
@@ -122,3 +124,15 @@ examples.
 | Docker (outside) |                  1099,7 |
 | Docker (inside)  |                  677,75 |
 | Apache           |                 1053,04 |
+
+# V2 - Ruby launcher
+
+The ruby launcher `run-dos-box.rb` is slightly more complicated that the
+original shell `run-dos-box.sh` (e.g. it generated unique temporary filenames
+for the program and the stdout file). It supersedes both `RunDOSBox.bat` and
+`run-dos-box.sh`. Its performance is worse (especially on the DOS experiment):
+
+| Experiment | Average duration (msec) |
+| ---------- | ----------------------: |
+| DOS        |                    1723 |
+| Apache     |                 1138,73 |
