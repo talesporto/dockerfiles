@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - `gwbasic`: New Ruby launcher script, supporting GWBasic and QBasic
 - `gwbasic`: work in progress with Rust launcher
+- `gwbasic`: Performance experiments
 
 ## [2020-02-22]
 
