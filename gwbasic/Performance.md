@@ -134,5 +134,21 @@ for the program and the stdout file). It supersedes both `RunDOSBox.bat` and
 
 | Experiment | Average duration (msec) |
 | ---------- | ----------------------: |
-| DOS        |                    1723 |
+| DOS        |                 1525,09 |
 | Apache     |                 1138,73 |
+
+# Tooling for performance
+
+The performance tool is in the `perf` folder. Build it with
+`cargo build --release`. Run it with
+`GWBASIC=GWBASIC.EXE ./perf/target/release/perf.exe`.
+
+With the performance tool, it is possible to re-run the experiments with a
+single command.
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1584,76 |
+| Docker (outside) |                 1259,88 |
+| Docker (inside)  |                  790,02 |
+| Apache           |                 1119,79 |
