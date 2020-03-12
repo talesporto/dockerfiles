@@ -1,8 +1,41 @@
 use std::env;
+use std::io;
+use std::io::Write;
 use std::process::{exit, Command, Stdio};
 use std::time::SystemTime;
 
-const count: i32 = 100;
+#[derive(Debug)]
+struct Args {
+    count: i32,
+    quiet: bool,
+}
+
+impl Args {
+    fn parse(&mut self) {
+        let mut iterator = env::args().skip(1);
+        loop {
+            let next = iterator.next();
+            match next {
+                Some(value) => {
+                    if value == "--count" {
+                        let next2 = iterator.next();
+                        self.count = match next2 {
+                            Some(x) => x.parse().unwrap(),
+                            None => panic!("--count requires an argument"),
+                        };
+                    } else if value == "--quiet" {
+                        self.quiet = true;
+                    } else {
+                        panic!(format!("Unexpected parameter {}", value));
+                    }
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+    }
+}
 
 fn now() -> u128 {
     SystemTime::now()
@@ -11,10 +44,14 @@ fn now() -> u128 {
         .as_millis()
 }
 
-fn run_standalone() {
+fn run_standalone(args: &Args) {
     let output = Command::new("ruby")
         .args(&["run-dos-box.rb", "HELLO.BAS"])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to execute command");
@@ -24,16 +61,25 @@ fn run_standalone() {
     }
 }
 
-fn dos_experiment() -> f64 {
+fn progress(n: i32, args: &Args) {
+    if args.quiet {
+        print!(".");
+        io::stdout().flush().unwrap();
+    } else {
+        println!("{}", n);
+    }
+}
+
+fn dos_experiment(args: &Args) -> f64 {
     let start = now();
     println!("Running DOS experiment");
-    for n in 1..count + 1 {
-        println!("{}", n);
-        run_standalone();
+    for n in 1..args.count + 1 {
+        progress(n, args);
+        run_standalone(args);
     }
     let stop = now();
     println!("{}", stop - start);
-    let average = ((stop - start) as f64) / (count as f64);
+    let average = ((stop - start) as f64) / (args.count as f64);
     println!("average {}", average);
     average
 }
@@ -44,11 +90,15 @@ fn current_dir_as_msys_path() -> String {
     original.replace("C:\\", "/c/").replace("\\", "/")
 }
 
-fn build_image() {
+fn build_image(args: &Args) {
     println!("Building Docker image");
     let output = Command::new("docker")
         .args(&["build", "-t", "gwbasic", "-f", "Dockerfile.standalone", "."])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Could not build docker image");
@@ -58,10 +108,14 @@ fn build_image() {
     }
 }
 
-fn run_docker_outside(volume_spec: &String) {
+fn run_docker_outside(volume_spec: &String, args: &Args) {
     let output = Command::new("docker")
         .args(&["run", "--rm", "-v", volume_spec, "gwbasic", "HELLO.BAS"])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to execute command");
@@ -71,24 +125,24 @@ fn run_docker_outside(volume_spec: &String) {
     }
 }
 
-fn docker_outside_experiment() -> f64 {
-    build_image();
+fn docker_outside_experiment(args: &Args) -> f64 {
+    build_image(args);
     let start = now();
     println!("Running Docker (outside) experiment");
     let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
-    for n in 1..count + 1 {
-        println!("{}", n);
-        run_docker_outside(&volume_spec);
+    for n in 1..args.count + 1 {
+        progress(n, args);
+        run_docker_outside(&volume_spec, args);
     }
     let stop = now();
     println!("{}", stop - start);
-    let average = ((stop - start) as f64) / (count as f64);
+    let average = ((stop - start) as f64) / (args.count as f64);
     println!("average {}", average);
     average
 }
 
-fn docker_inside_experiment() -> f64 {
-    build_image();
+fn docker_inside_experiment(args: &Args) -> f64 {
+    build_image(args);
     let start = now();
     println!("Running Docker (inside) experiment");
     let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
@@ -102,8 +156,13 @@ fn docker_inside_experiment() -> f64 {
             "bash",
             "gwbasic",
             "/basic/src/perf-inside.sh",
+            &args.count.to_string(),
         ])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to execute command");
@@ -113,12 +172,12 @@ fn docker_inside_experiment() -> f64 {
     }
     let stop = now();
     println!("{}", stop - start);
-    let average = ((stop - start) as f64) / (count as f64);
+    let average = ((stop - start) as f64) / (args.count as f64);
     println!("average {}", average);
     average
 }
 
-fn build_httpd_image() {
+fn build_httpd_image(args: &Args) {
     println!("Building Docker HTTPD image");
     let output = Command::new("docker")
         .args(&[
@@ -129,7 +188,11 @@ fn build_httpd_image() {
             "Dockerfile.httpd",
             ".",
         ])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Could not build docker image");
@@ -139,7 +202,7 @@ fn build_httpd_image() {
     }
 }
 
-fn start_httpd() {
+fn start_httpd(args: &Args) {
     println!("Starting HTTPD");
     let output = Command::new("docker")
         .args(&[
@@ -154,7 +217,11 @@ fn start_httpd() {
             &format!("{}/rest:/basic/src", current_dir_as_msys_path()),
             "gwbasic-httpd",
         ])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Could not start docker container");
@@ -164,11 +231,15 @@ fn start_httpd() {
     }
 }
 
-fn stop_httpd() {
+fn stop_httpd(args: &Args) {
     println!("Stopping HTTPD");
     let output = Command::new("docker")
         .args(&["stop", "gwbasic-httpd"])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Could not stop docker container");
@@ -178,7 +249,7 @@ fn stop_httpd() {
     }
 }
 
-fn run_curl(i: i32) {
+fn run_curl(i: i32, args: &Args) {
     let output = Command::new("curl")
         .args(&[
             "-f",
@@ -188,7 +259,11 @@ fn run_curl(i: i32) {
             "Content-Type: text/plain",
             "http://localhost:8080/api/todo",
         ])
-        .stdout(Stdio::inherit())
+        .stdout(if args.quiet {
+            Stdio::piped()
+        } else {
+            Stdio::inherit()
+        })
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to execute command");
@@ -198,28 +273,33 @@ fn run_curl(i: i32) {
     }
 }
 
-fn apache_experiment() -> f64 {
-    build_httpd_image();
-    start_httpd();
+fn apache_experiment(args: &Args) -> f64 {
+    build_httpd_image(args);
+    start_httpd(args);
     let start = now();
     println!("Running Apache experiment");
-    for n in 1..count + 1 {
-        println!("{}", n);
-        run_curl(n);
+    for n in 1..args.count + 1 {
+        progress(n, args);
+        run_curl(n, args);
     }
     let stop = now();
     println!("{}", stop - start);
-    let average = ((stop - start) as f64) / (count as f64);
+    let average = ((stop - start) as f64) / (args.count as f64);
     println!("average {}", average);
-    stop_httpd();
+    stop_httpd(args);
     average
 }
 
 fn main() {
-    let dos_average = dos_experiment();
-    let docker_outside_average = docker_outside_experiment();
-    let docker_inside_average = docker_inside_experiment();
-    let apache_average = apache_experiment();
+    let mut args = Args {
+        count: 100,
+        quiet: false,
+    };
+    args.parse();
+    let dos_average = dos_experiment(&args);
+    let docker_outside_average = docker_outside_experiment(&args);
+    let docker_inside_average = docker_inside_experiment(&args);
+    let apache_average = apache_experiment(&args);
     println!("Summary:");
     println!("| DOS              | {} |", dos_average);
     println!("| Docker (outside) | {} |", docker_outside_average);
