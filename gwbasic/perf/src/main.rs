@@ -2,6 +2,8 @@ use std::env;
 use std::process::{exit, Command, Stdio};
 use std::time::SystemTime;
 
+const count: i32 = 100;
+
 fn now() -> u128 {
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -24,7 +26,6 @@ fn run_standalone() {
 
 fn dos_experiment() -> f64 {
     let start = now();
-    let count = 100;
     println!("Running DOS experiment");
     for n in 1..count + 1 {
         println!("{}", n);
@@ -73,9 +74,8 @@ fn run_docker_outside(volume_spec: &String) {
 fn docker_outside_experiment() -> f64 {
     build_image();
     let start = now();
-    let count = 100;
     println!("Running Docker (outside) experiment");
-    let volume_spec = format!("{}:/basic", current_dir_as_msys_path());
+    let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
     for n in 1..count + 1 {
         println!("{}", n);
         run_docker_outside(&volume_spec);
@@ -90,11 +90,19 @@ fn docker_outside_experiment() -> f64 {
 fn docker_inside_experiment() -> f64 {
     build_image();
     let start = now();
-    let count = 100;
     println!("Running Docker (inside) experiment");
-    let volume_spec = format!("{}:/basic", current_dir_as_msys_path());
+    let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
     let output = Command::new("docker")
-        .args(&["run", "--rm", "-v", &volume_spec, "--entrypoint", "bash", "gwbasic", "/basic/perf-inside.sh"])
+        .args(&[
+            "run",
+            "--rm",
+            "-v",
+            &volume_spec,
+            "--entrypoint",
+            "bash",
+            "gwbasic",
+            "/basic/src/perf-inside.sh",
+        ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -113,7 +121,14 @@ fn docker_inside_experiment() -> f64 {
 fn build_httpd_image() {
     println!("Building Docker HTTPD image");
     let output = Command::new("docker")
-        .args(&["build", "-t", "gwbasic-httpd", "-f", "Dockerfile.httpd", "."])
+        .args(&[
+            "build",
+            "-t",
+            "gwbasic-httpd",
+            "-f",
+            "Dockerfile.httpd",
+            ".",
+        ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -127,7 +142,18 @@ fn build_httpd_image() {
 fn start_httpd() {
     println!("Starting HTTPD");
     let output = Command::new("docker")
-        .args(&["run", "--rm", "-d", "--name", "gwbasic-httpd", "-p", "8080:80", "-v", &format!("{}/rest:/basic/", current_dir_as_msys_path()), "gwbasic-httpd"])
+        .args(&[
+            "run",
+            "--rm",
+            "-d",
+            "--name",
+            "gwbasic-httpd",
+            "-p",
+            "8080:80",
+            "-v",
+            &format!("{}/rest:/basic/src", current_dir_as_msys_path()),
+            "gwbasic-httpd",
+        ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -154,7 +180,14 @@ fn stop_httpd() {
 
 fn run_curl(i: i32) {
     let output = Command::new("curl")
-        .args(&["-f", "--data", &format!("hello {}", i), "-H", "Content-Type: text/plain", "http://localhost:8080/api/todo"])
+        .args(&[
+            "-f",
+            "--data",
+            &format!("hello {}", i),
+            "-H",
+            "Content-Type: text/plain",
+            "http://localhost:8080/api/todo",
+        ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -169,7 +202,6 @@ fn apache_experiment() -> f64 {
     build_httpd_image();
     start_httpd();
     let start = now();
-    let count = 100;
     println!("Running Apache experiment");
     for n in 1..count + 1 {
         println!("{}", n);
@@ -182,7 +214,6 @@ fn apache_experiment() -> f64 {
     stop_httpd();
     average
 }
-
 
 fn main() {
     let dos_average = dos_experiment();

@@ -27,7 +27,6 @@ def main
   args = Arguments.new
   args.parse!
   main = Main.new(args)
-  main.copy_program
   main.create_stdin
   main.create_batch_file
   main.run_dosbox
@@ -39,38 +38,47 @@ end
 class Arguments
   def initialize
     @dosbox = nil
-    @gwbasic = nil
-    @qbasic = nil
+    @basic = nil
+    @mode = nil
     @needs_stdin = false
     @program = nil
   end
 
   attr_reader :dosbox
-  attr_reader :gwbasic
-  attr_reader :qbasic
+  attr_reader :basic
+  attr_reader :mode
   attr_reader :needs_stdin
   attr_reader :program
 
   def parse!
     @dosbox = parse_dosbox
-    @gwbasic = parse_gwbasic
-    @qbasic = parse_qbasic
+    @basic = parse_basic!
     @needs_stdin = parse_needs_stdin
-    parse_program
+    @program = parse_program
   end
 
   private
 
+  # Gets the location of DOSBox.exe based on the environment variable DOSBOX.
   def parse_dosbox
     ENV['DOSBOX'] || 'C:\Program Files (x86)\DOSBox-0.74\DOSBox.exe'
   end
 
-  def parse_gwbasic
-    ENV['GWBASIC'] || ''
-  end
+  # Gets the location of the basic intepreter.
+  # The environment variables GWBASIC and QBASIC are used.
+  def parse_basic!
+    exe = ENV['GWBASIC'] || ''
+    if exe.empty?
+      @mode = :qbasic
+      exe = ENV['QBASIC'] || ''
+      raise 'Please specify the location of GWBasic or QBasic' if exe.empty?
+    else
+      @mode = :gwbasic
+    end
 
-  def parse_qbasic
-    ENV['QBASIC'] || ''
+    raise "Basic interpreter #{exe} not found" unless File.file?(exe)
+
+    correct_path(File.realpath(exe))
   end
 
   def parse_needs_stdin
@@ -78,16 +86,132 @@ class Arguments
   end
 
   def parse_program
-    if ARGV.size <= 0
-      warn 'Please specify the BAS file to run'
-      exit!
+    result = if ARGV.empty?
+               parse_program_from_env
+             else
+               ARGV[0] || ''
+             end
+
+    raise 'Please specify the program to run' if result.empty?
+
+    raise "File #{result} not found" unless File.file?(result)
+
+    correct_path(File.realpath(result))
+  end
+
+  def parse_program_from_env
+    if ENV['BAS']
+      "/basic/src/#{ENV['BAS']}"
+    else
+      ''
+    end
+  end
+end
+
+# Takes care of the path generation, relative paths, random files, etc
+class PathEnv
+  # Creates an instance of this class.
+  # The two arguments must be full absolute paths
+  # (taken care of in Arguments class).
+  def initialize(basic_exe, program_bas)
+    @basic_exe = basic_exe
+    @program_bas = program_bas
+
+    # the batch file needs to be placed on the common ancestor of
+    # GWBASIC.EXE and PROGRAM.BAS
+    #
+    # the dir of the batch file will be the C:\ drive
+    @batch_dir = common_ancestor(@basic_exe, @program_bas)
+
+    @batch_file = make_unique_random_filename(@batch_dir, 'BAT')
+    @stdin_file = make_unique_random_filename(@batch_dir, 'INP')
+    @stdout_file = make_unique_random_filename(@batch_dir, 'OUT')
+    @dosbox_log_file = make_unique_random_filename(@batch_dir, 'LOG')
+  end
+
+  attr_reader :batch_file
+  attr_reader :stdin_file
+  attr_reader :stdout_file
+  attr_reader :dosbox_log_file
+
+  def cleanup
+    [
+      @batch_file,
+      @stdin_file,
+      @stdout_file,
+      @dosbox_log_file
+    ].each do |f|
+      File.delete f
+    end
+  end
+
+  def program_bas_dir_from_dos
+    relative_dos_path(File.dirname(@program_bas), @batch_dir)
+  end
+
+  def program_bas_filename
+    File.basename(@program_bas)
+  end
+
+  def basic_exe_from_dos
+    relative_dos_path(@basic_exe, @batch_dir)
+  end
+
+  def stdin_from_dos
+    relative_dos_path(@stdin_file, @batch_dir)
+  end
+
+  def stdout_from_dos
+    relative_dos_path(@stdout_file, @batch_dir)
+  end
+
+  private
+
+  def make_unique_random_filename(path, ext)
+    file_already_exists = true
+    while file_already_exists
+      result = join(path, random_filename + '.' + ext)
+      file_already_exists = File.file?(result)
     end
 
-    @program = ARGV[0]
-    return if File.exist?(program)
+    result
+  end
 
-    warn "File #{program} not found"
-    exit!
+  def random_filename
+    # generate random filename (must be 8.3)
+    o = ('A'..'Z').to_a
+    (1...8).map { o[rand(o.length)] }.join
+  end
+
+  def ancestor(path)
+    parent_path = File.dirname(path)
+    raise 'Could not find ancestor' if path == parent_path
+
+    parent_path
+  end
+
+  def common_ancestor(left_path, right_path)
+    return left_path if left_path == right_path
+
+    if left_path.length > right_path.length
+      common_ancestor ancestor(left_path), right_path
+    else
+      common_ancestor left_path, ancestor(right_path)
+    end
+  end
+
+  def relative_dos_path(path, ancestor_dir)
+    result = ''
+    while path != ancestor_dir
+      result = '\\' + result unless result.empty?
+
+      result = File.basename(path) + result
+      path = ancestor(path)
+    end
+
+    result = '\\' + result unless result.start_with?('\\')
+
+    'C:' + result
   end
 end
 
@@ -95,65 +219,16 @@ end
 class Main
   def initialize(args)
     @args = args
-    if !args.gwbasic.empty?
-      @mode = :gwbasic
-      @basic_dir = File.dirname(args.gwbasic)
-      @basic_exe = File.basename(args.gwbasic)
-    elsif !args.qbasic.empty?
-      @mode = :qbasic
-      @basic_dir = File.dirname(args.qbasic)
-      @basic_exe = File.basename(args.qbasic)
-    else
-      warn 'Please specify either GWBASIC or QBASIC env variable'
-      exit!
-    end
-
-    @tmp_filename = random_filename
-
-    # TODO: support STDIN.TXT with different filename
-    # TODO: lockfile (which means it needs to live inside the data folder)
-    # TODO: use glorious CRLF for BAS files (drop the shebang support)
-
-    # the batch file needs to live at the same folder with GWBASIC.EXE,
-    # so that DOSBOX mounts it as C:\
-    @batch = "#{@tmp_filename}.BAT"
-    @batch_full = join(@basic_dir, @batch)
-    @stdin = 'STDIN.TXT' # TODO: this needs to be varying too
-    @stdin_full = join(@basic_dir, @stdin)
-    @stdout = "#{@tmp_filename}.OUT"
-    @stdout_full = join(@basic_dir, @stdout)
-    @program_copy = "#{@tmp_filename}.BAS"
-    @program_copy_full = join(@basic_dir, @program_copy)
-    @dosbox_log_full = join(@basic_dir, "#{@tmp_filename}.log")
+    @path_env = PathEnv.new(@args.basic, @args.program)
   end
 
   def cleanup
-    [
-      @stdin_full,
-      @batch_full,
-      @program_copy_full,
-      @stdout_full,
-      @dosbox_log_full
-    ].each do |f|
-      File.delete f
-    end
-  end
-
-  def copy_program
-    # copy program to temporary location
-    File.open(@args.program, 'r') do |f_in|
-      File.open(@program_copy_full, 'wb') do |f_out|
-        while (s = f_in.gets)
-          # ensure CRLF, strip shebang
-          f_out.print "#{s.chomp}\r\n" unless s =~ %r{^#!/}
-        end
-      end
-    end
+    @path_env.cleanup
   end
 
   def create_stdin
     # touch stdin.txt
-    File.open(@stdin_full, 'wb') do |f|
+    File.open(@path_env.stdin_file, 'wb') do |f|
       if @args.needs_stdin
         while (s = STDIN.gets)
           f.print "#{s.chomp}\r\n"
@@ -163,21 +238,32 @@ class Main
   end
 
   def create_batch_file
-    # touch run.bat
-    File.open(@batch_full, 'wb') do |f|
-      if @mode == :gwbasic
-        ENV.each do |k, v|
-          if k != 'PATH' && k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
-            f.print "SET #{k}=#{v}\r\n"
+    arg = if @args.mode == :gwbasic
+            [
+              @path_env.basic_exe_from_dos,
+              @path_env.program_bas_filename,
+              "<#{@path_env.stdin_from_dos}",
+              ">#{@path_env.stdout_from_dos}\r\n"
+            ]
+          else
+            [
+              @path_env.basic_exe_from_dos,
+              '/RUN',
+              @path_env.program_bas_filename,
+              "<#{@path_env.stdin_from_dos}",
+              ">#{@path_env.stdout_from_dos}\r\n"
+            ]
           end
-        end
-      end
 
-      if @mode == :gwbasic
-        f.print "#{@basic_exe} #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
-      else
-        f.print "#{@basic_exe} /RUN #{@program_copy} <#{@stdin} >#{@stdout}\r\n"
-      end
+    # touch run.bat
+    File.open(@path_env.batch_file, 'wb') do |f|
+      copy_env f
+      f.print "SET STDIN=#{@path_env.stdin_from_dos}\r\n"
+
+      # CD into the folder of where the BAS file lives, so that by default it
+      # reads/writes files in its own folder
+      f.print "CD #{@path_env.program_bas_dir_from_dos}\r\n"
+      f.print arg.join(' ')
     end
   end
 
@@ -190,14 +276,14 @@ class Main
     # create process
     system(
       env,
-      @args.dosbox, @batch_full, '-exit', '-noautoexec',
-      %i[out err] => @dosbox_log_full
+      @args.dosbox, @path_env.batch_file, '-exit', '-noautoexec',
+      %i[out err] => @path_env.dosbox_log_file
     )
   end
 
   def print_stdout
     # Output stdout
-    File.open(@stdout_full, 'r') do |f|
+    File.open(@path_env.stdout_file, 'r') do |f|
       while (s = f.gets)
         puts s.chomp
       end
@@ -206,10 +292,15 @@ class Main
 
   private
 
-  def random_filename
-    # generate random filename (must be 8.3)
-    o = ('A'..'Z').to_a
-    (1...8).map { o[rand(o.length)] }.join
+  def copy_env(file)
+    # TODO: support ENV for QBasic too
+    if @args.mode == :gwbasic
+      ENV.each do |k, v|
+        if k != 'PATH' && k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
+          file.print "SET #{k}=#{v}\r\n"
+        end
+      end
+    end
   end
 end
 

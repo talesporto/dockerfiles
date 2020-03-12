@@ -4,18 +4,28 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY my-httpd.conf /usr/local/apache2/conf/httpd.conf
 
-# /basic contains the user Basic code
-VOLUME [ "/basic" ]
+# Folder structure
+# /
+# |- basic <- common ancestor (batch file)
+#    |
+#    |- bin <- GWBASIC.EXE lives here, volume
+#    |- src <- BAS files live here, volume
 
-# /usr/local/gwbasic contains GWBASIC.EXE and the runner script
-RUN mkdir -p /usr/local/gwbasic
-COPY GWBASIC.EXE /usr/local/gwbasic
-COPY run-dos-box.rb /usr/local/gwbasic
-RUN chmod +x /usr/local/gwbasic/run-dos-box.rb
-RUN chown -R daemon:www-data /usr/local/gwbasic
+RUN mkdir -p /basic/bin
+RUN mkdir -p /basic/src
+
+VOLUME [ "/basic/bin" ]
+VOLUME [ "/basic/src" ]
+
+COPY GWBASIC.EXE /basic/bin/
+COPY run-dos-box.rb /usr/local/bin
+RUN chmod +x /usr/local/bin/run-dos-box.rb
+
+# so that the BAS programs can read/write files in their folder
+RUN chown daemon:www-data /basic/src
+# so that the launcher can create temporary files like batch files
+RUN chown daemon:www-data /basic
 
 # Override the location of these tools
 ENV DOSBOX=dosbox
-ENV GWBASIC=/usr/local/gwbasic/GWBASIC.EXE
-
-RUN ln -s /usr/local/gwbasic/run-dos-box.rb /usr/bin/gwbasic
+ENV GWBASIC=/basic/bin/GWBASIC.EXE

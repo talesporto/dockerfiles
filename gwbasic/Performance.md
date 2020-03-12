@@ -152,3 +152,25 @@ single command.
 | Docker (outside) |                 1259,88 |
 | Docker (inside)  |                  790,02 |
 | Apache           |                 1119,79 |
+
+# V2.1 - Ruby launcher
+
+Dropped support for shebang line. BAS files are not copied to a temporary
+location (as a consequence, they need to be CRLF).
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1595.49 |
+| Docker (outside) |                 1314.03 |
+| Docker (inside)  |                  753.17 |
+| Apache           |                 1093.45 |
+
+Unique filename for `STDIN.TXT`, CD-ing into the BAS folder before running the
+code:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1614.89 |
+| Docker (outside) |                 1321.84 |
+| Docker (inside)  |                  816.18 |
+| Apache           |                 1103.62 |

@@ -1,8 +1,8 @@
 # shebang files must end in LF
 *.sh eol=lf
-*.bas eol=lf
-*.BAS eol=lf
 *.rb eol=lf
 
+*.bas eol=crlf
+*.BAS eol=crlf
 *.bat eol=crlf
 *.BAT eol=crlf
