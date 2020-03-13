@@ -80,11 +80,11 @@ sub hub_set_description {
 # so we check if there is a README.md and if one exists, it is appended to
 # the description.
 sub generate_full_description {
-  my ($folder, $username, $description) = @_;
+  my ($folder, $username, $description, $file) = @_;
   my $full_description = <<HERE;
 $description
 
-[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/Dockerfile)
+[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/$file)
 
 HERE
 
@@ -154,7 +154,22 @@ sub process {
     {
       folder      => "vsftpd",
       description => "FTPS image based on vsftpd"
-    }
+    },
+    {
+      folder => "gwbasic",
+      images => [
+        {
+          file        => "Dockerfile.standalone",
+          description => "Launch GW-Basic with DOSBox",
+          name        => "gwbasic",
+        },
+        {
+          file        => "Dockerfile.httpd",
+          description => "Apache HTTPD with GW-Basic as cgi-bin",
+          name        => "gwbasic-httpd",
+        }
+      ]
+    },
   );
 
   my %folder_to_data = map { $_->{folder} => $_ } @data;
@@ -167,33 +182,47 @@ sub process {
 
   foreach my $folder (keys(%folder_to_data)) {
     my $data = $folder_to_data{$folder};
-    my $name = $data->{name} || $folder;
-    chdir "$cwd/$folder";
+    my @images = @{get_images($data)};
+    for my $image (@images) {
+      my $name = $image->{name} || $folder;
+      my $dockerfile = $image->{file} || 'Dockerfile';
+      chdir "$cwd/$folder";
 
-    if (grep { /$folder/ } @changed_files) {
-      my $fqn = "$username/$name:$date";
-      say "Building folder $folder as $fqn";
-      system("docker build -t $fqn .") == 0 or die "could not build image $name";
-      system("docker push $fqn") == 0 or die "could not push $fqn";
-      if ($is_master) {
-        # tag latest
-        my $fqn_latest = "$username/$name:latest";
-        system("docker tag $fqn $fqn_latest") == 0 or die "could not tag $fqn as $fqn_latest";
-        system("docker push $fqn_latest") == 0 or die "could not push $fqn_latest";
+      if (grep { /$folder/ } @changed_files) {
+        my $fqn = "$username/$name:$date";
+        say "Building folder $folder as $fqn";
+        system("docker build -f $dockerfile -t $fqn .") == 0 or die "could not build image $name";
+        system("docker push $fqn") == 0 or die "could not push $fqn";
+        if ($is_master) {
+          # tag latest
+          my $fqn_latest = "$username/$name:latest";
+          system("docker tag $fqn $fqn_latest") == 0 or die "could not tag $fqn as $fqn_latest";
+          system("docker push $fqn_latest") == 0 or die "could not push $fqn_latest";
+        }
+      } else {
+        say "Not building $folder because it has not changed";
       }
-    } else {
-      say "Not building $folder because it has not changed";
-    }
 
-    # update description
-    hub_set_description(
-      jwt_token        => $jwt_token,
-      description      => $data->{description},
-      full_description => generate_full_description($folder, $username, $data->{description}),
-      username         => $username,
-      name             => $name
-    );
+      # update description
+      hub_set_description(
+        jwt_token        => $jwt_token,
+        description      => $image->{description},
+        full_description => generate_full_description($folder, $username, $image->{description}, $dockerfile),
+        username         => $username,
+        name             => $name
+      );
+    }
   }
+}
+
+sub get_images {
+  my ($data) = @_;
+  my $images = $data->{images};
+  if ($images) {
+    return $images;
+  }
+
+  return [ $data ];
 }
 
 my $username = $ENV{DOCKER_USERNAME};
