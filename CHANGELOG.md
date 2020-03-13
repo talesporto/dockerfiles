@@ -27,6 +27,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   launcher script and specify the BAS file with an environment variable named
   `BAS` in the rewrite rule. For example:
   `RewriteRule "^/api/todo$" "/cgi-bin/run-dos-box.rb" [E=BAS:LIST.BAS,PT,L]`
+- `gwbasic`: No longer backing `GWBASIC.EXE` inside the image. It needs to be
+  provided via a volume (`/basic/bin`).
 
 ### Removed
 

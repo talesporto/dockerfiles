@@ -46,7 +46,7 @@ fn now() -> u128 {
 
 fn run_standalone(args: &Args) {
     let output = Command::new("ruby")
-        .args(&["run-dos-box.rb", "HELLO.BAS"])
+        .args(&["run-dos-box.rb", "./src/HELLO.BAS"])
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -108,8 +108,19 @@ fn build_image(args: &Args) {
     }
 }
 
-fn run_docker_outside(volume_spec: &String, args: &Args) {
-    let run_args = vec!["run", "--rm", "-v", volume_spec, "gwbasic", "HELLO.BAS"];
+fn run_docker_outside(args: &Args) {
+    let bin_volume_spec = format!("{}/bin:/basic/bin", current_dir_as_msys_path());
+    let src_volume_spec = format!("{}/src:/basic/src", current_dir_as_msys_path());
+    let run_args = vec![
+        "run",
+        "--rm",
+        "-v",
+        &bin_volume_spec,
+        "-v",
+        &src_volume_spec,
+        "gwbasic",
+        "HELLO.BAS",
+    ];
     let output = Command::new("docker")
         .args(run_args)
         .stdout(if args.quiet {
@@ -130,10 +141,9 @@ fn docker_outside_experiment(args: &Args) -> f64 {
     build_image(args);
     let start = now();
     println!("Running Docker (outside) experiment");
-    let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
     for n in 1..args.count + 1 {
         progress(n, args);
-        run_docker_outside(&volume_spec, args);
+        run_docker_outside(args);
     }
     let stop = now();
     println!("{}", stop - start);
@@ -146,26 +156,31 @@ fn docker_inside_experiment(args: &Args) -> f64 {
     build_image(args);
     let start = now();
     println!("Running Docker (inside) experiment");
-    let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
+    let bin_volume_spec = format!("{}/bin:/basic/bin", current_dir_as_msys_path());
+    let src_volume_spec = format!("{}/src:/basic/src", current_dir_as_msys_path());
+    let perf_volume_spec = format!("{}/perf:/usr/local/perf/bin:ro", current_dir_as_msys_path());
     let fmt_count = args.count.to_string();
-    let run_args = vec![
+    let mut run_args = vec![
         "run",
         "--rm",
         "-v",
-        &volume_spec,
+        &bin_volume_spec,
+        "-v",
+        &src_volume_spec,
+        "-v",
+        &perf_volume_spec,
         "--entrypoint",
         "bash",
         "gwbasic",
-        "/basic/src/perf-inside.sh",
+        "/usr/local/perf/bin/perf-inside.sh",
         &fmt_count,
     ];
+    if args.quiet {
+        run_args.push("--quiet");
+    }
     let output = Command::new("docker")
         .args(run_args)
-        .stdout(if args.quiet {
-            Stdio::piped()
-        } else {
-            Stdio::inherit()
-        })
+        .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
         .expect("Failed to execute command");
@@ -207,7 +222,8 @@ fn build_httpd_image(args: &Args) {
 
 fn start_httpd(args: &Args) {
     println!("Starting HTTPD");
-    let volume_spec = format!("{}/rest:/basic/src", current_dir_as_msys_path());
+    let bin_volume_spec = format!("{}/bin:/basic/bin", current_dir_as_msys_path());
+    let src_volume_spec = format!("{}/rest:/basic/src", current_dir_as_msys_path());
     let run_args = vec![
         "run",
         "--rm",
@@ -217,7 +233,9 @@ fn start_httpd(args: &Args) {
         "-p",
         "8080:80",
         "-v",
-        &volume_spec,
+        &bin_volume_spec,
+        "-v",
+        &src_volume_spec,
         "gwbasic-httpd",
     ];
     let output = Command::new("docker")
@@ -255,16 +273,21 @@ fn stop_httpd(args: &Args) {
 }
 
 fn run_curl(i: i32, args: &Args) {
+    let payload = format!("hello {}", i);
+    let mut run_args = vec![
+        "-f",
+        "--data",
+        &payload,
+        "-H",
+        "Content-Type: text/plain",
+        "http://localhost:8080/api/todo",
+    ];
+
+    if args.quiet {
+        run_args.insert(0, "--silent");
+    }
     let output = Command::new("curl")
-        .args(&[
-            if args.quiet { "--silent" } else { "" },
-            "-f",
-            "--data",
-            &format!("hello {}", i),
-            "-H",
-            "Content-Type: text/plain",
-            "http://localhost:8080/api/todo",
-        ])
+        .args(run_args)
         .stdout(if args.quiet {
             Stdio::piped()
         } else {

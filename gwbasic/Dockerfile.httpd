@@ -17,9 +17,6 @@ RUN mkdir -p /basic/src
 VOLUME [ "/basic/bin" ]
 VOLUME [ "/basic/src" ]
 
-COPY GWBASIC.EXE /basic/bin/
-COPY QBASIC.EXE /basic/bin/
-
 COPY run-dos-box.rb /usr/local/bin
 RUN chmod +x /usr/local/bin/run-dos-box.rb
 

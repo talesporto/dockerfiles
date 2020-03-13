@@ -19,9 +19,6 @@ VOLUME [ "/basic/src" ]
 # So that HELLO.BAS without a path is in the correct folder
 WORKDIR /basic/src
 
-# TODO do not add to the image anymore
-COPY GWBASIC.EXE /basic/bin/
-COPY QBASIC.EXE /basic/bin/
 COPY run-dos-box.rb /usr/local/bin/
 RUN chmod +x /usr/local/bin/run-dos-box.rb
 
