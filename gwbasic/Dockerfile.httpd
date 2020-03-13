@@ -11,8 +11,7 @@ COPY my-httpd.conf /usr/local/apache2/conf/httpd.conf
 #    |- bin <- GWBASIC.EXE lives here, volume
 #    |- src <- BAS files live here, volume
 
-RUN mkdir -p /basic/bin
-RUN mkdir -p /basic/src
+RUN mkdir -p /basic/bin && mkdir -p /basic/src
 
 VOLUME [ "/basic/bin" ]
 VOLUME [ "/basic/src" ]
