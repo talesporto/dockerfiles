@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 
 - `gwbasic`: Dropped support for BAS scripts with a shebang line
+- `gwbasic`: Removed batch and shell launchers, keeping only ruby launcher
 
 ## [2020-02-22]
 

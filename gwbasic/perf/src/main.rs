@@ -109,8 +109,9 @@ fn build_image(args: &Args) {
 }
 
 fn run_docker_outside(volume_spec: &String, args: &Args) {
+    let run_args = vec!["run", "--rm", "-v", volume_spec, "gwbasic", "HELLO.BAS"];
     let output = Command::new("docker")
-        .args(&["run", "--rm", "-v", volume_spec, "gwbasic", "HELLO.BAS"])
+        .args(run_args)
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -146,18 +147,20 @@ fn docker_inside_experiment(args: &Args) -> f64 {
     let start = now();
     println!("Running Docker (inside) experiment");
     let volume_spec = format!("{}:/basic/src", current_dir_as_msys_path());
+    let fmt_count = args.count.to_string();
+    let run_args = vec![
+        "run",
+        "--rm",
+        "-v",
+        &volume_spec,
+        "--entrypoint",
+        "bash",
+        "gwbasic",
+        "/basic/src/perf-inside.sh",
+        &fmt_count,
+    ];
     let output = Command::new("docker")
-        .args(&[
-            "run",
-            "--rm",
-            "-v",
-            &volume_spec,
-            "--entrypoint",
-            "bash",
-            "gwbasic",
-            "/basic/src/perf-inside.sh",
-            &args.count.to_string(),
-        ])
+        .args(run_args)
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -204,19 +207,21 @@ fn build_httpd_image(args: &Args) {
 
 fn start_httpd(args: &Args) {
     println!("Starting HTTPD");
+    let volume_spec = format!("{}/rest:/basic/src", current_dir_as_msys_path());
+    let run_args = vec![
+        "run",
+        "--rm",
+        "-d",
+        "--name",
+        "gwbasic-httpd",
+        "-p",
+        "8080:80",
+        "-v",
+        &volume_spec,
+        "gwbasic-httpd",
+    ];
     let output = Command::new("docker")
-        .args(&[
-            "run",
-            "--rm",
-            "-d",
-            "--name",
-            "gwbasic-httpd",
-            "-p",
-            "8080:80",
-            "-v",
-            &format!("{}/rest:/basic/src", current_dir_as_msys_path()),
-            "gwbasic-httpd",
-        ])
+        .args(run_args)
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -252,6 +257,7 @@ fn stop_httpd(args: &Args) {
 fn run_curl(i: i32, args: &Args) {
     let output = Command::new("curl")
         .args(&[
+            if args.quiet { "--silent" } else { "" },
             "-f",
             "--data",
             &format!("hello {}", i),

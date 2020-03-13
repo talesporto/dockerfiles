@@ -174,3 +174,35 @@ code:
 | Docker (outside) |                 1321.84 |
 | Docker (inside)  |                  816.18 |
 | Apache           |                 1103.62 |
+
+# V2.2 - DOSEMU
+
+DosEMU seems to be an alternative to DOSBox, but it looks as if it is not
+maintained. In this experiment we're comparing DOSBox with DOSEmu to see if it
+yields any performance improvements.
+
+DOSBox:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| Docker (outside) |                  1247.6 |
+| Docker (inside)  |                   830.4 |
+
+DOSEmu:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| Docker (outside) |                  1249.5 |
+| Docker (inside)  |                   857.6 |
+
+It seems that the performance is similar, so no further action will be taken to
+support it.
+
+After removing the DOSEmu supporting code:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1648.55 |
+| Docker (outside) |                 1262.58 |
+| Docker (inside)  |                  749.66 |
+| Apache           |                 1144.05 |

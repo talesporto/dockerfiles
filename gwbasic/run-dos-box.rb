@@ -25,7 +25,6 @@
 
 def main
   args = Arguments.new
-  args.parse!
   main = Main.new(args)
   main.create_stdin
   main.create_batch_file
@@ -37,11 +36,11 @@ end
 # Parses arguments from command line and environment variables.
 class Arguments
   def initialize
-    @dosbox = nil
-    @basic = nil
-    @mode = nil
-    @needs_stdin = false
-    @program = nil
+    @dosbox = parse_dosbox
+    @basic = parse_basic!
+    @needs_stdin = parse_needs_stdin
+    @program = parse_program
+    @cleanup = !ARGV.include?('--no-cleanup')
   end
 
   attr_reader :dosbox
@@ -49,13 +48,7 @@ class Arguments
   attr_reader :mode
   attr_reader :needs_stdin
   attr_reader :program
-
-  def parse!
-    @dosbox = parse_dosbox
-    @basic = parse_basic!
-    @needs_stdin = parse_needs_stdin
-    @program = parse_program
-  end
+  attr_reader :cleanup
 
   private
 
@@ -86,17 +79,17 @@ class Arguments
   end
 
   def parse_program
-    result = if ARGV.empty?
-               parse_program_from_env
-             else
-               ARGV[0] || ''
-             end
+    res = if ARGV.empty?
+            parse_program_from_env
+          else
+            ARGV[0] || ''
+          end
 
-    raise 'Please specify the program to run' if result.empty?
+    raise 'Please specify the program to run' if res.empty?
 
-    raise "File #{result} not found" unless File.file?(result)
+    raise "File #{res} not found" unless File.file?(res)
 
-    correct_path(File.realpath(result))
+    correct_path(File.realpath(res))
   end
 
   def parse_program_from_env
@@ -129,6 +122,7 @@ class PathEnv
     @dosbox_log_file = make_unique_random_filename(@batch_dir, 'LOG')
   end
 
+  attr_reader :batch_dir
   attr_reader :batch_file
   attr_reader :stdin_file
   attr_reader :stdout_file
@@ -223,7 +217,7 @@ class Main
   end
 
   def cleanup
-    @path_env.cleanup
+    @path_env.cleanup if @args.cleanup
   end
 
   def create_stdin
@@ -262,6 +256,7 @@ class Main
 
       # CD into the folder of where the BAS file lives, so that by default it
       # reads/writes files in its own folder
+      f.print "C:\r\n"
       f.print "CD #{@path_env.program_bas_dir_from_dos}\r\n"
       f.print arg.join(' ')
     end
@@ -270,10 +265,8 @@ class Main
   def run_dosbox
     env = {
       'SDL_VIDEODRIVER' => 'dummy',
-      'TERM' => 'xterm'
+      'TERM' => 'dumb'
     }
-
-    # create process
     system(
       env,
       @args.dosbox, @path_env.batch_file, '-exit', '-noautoexec',
@@ -296,7 +289,7 @@ class Main
     # TODO: support ENV for QBasic too
     if @args.mode == :gwbasic
       ENV.each do |k, v|
-        if k != 'PATH' && k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
+        if k != 'PATH' && k != 'LS_COLORS' &&  k =~ /^[A-Z][A-Z_]+$/ && !v.empty? && !v.include?(' ')
           file.print "SET #{k}=#{v}\r\n"
         end
       end
