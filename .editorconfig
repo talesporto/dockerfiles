@@ -11,7 +11,7 @@ trim_trailing_whitespace = true
 [*.sh]
 end_of_line = lf
 
-[*.rs]
+[*.{pl,rs}]
 indent_size = 4
 
 [Makefile]
