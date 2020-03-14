@@ -241,8 +241,8 @@ sub hub_set_description {
     );
 
     my $api_version      = $args{api_version};
-    my $path             = "repositories/$username/$name/";
     my $username         = docker_username();
+    my $path             = "repositories/$username/$name/";
     my $hub_jwt_token    = $args{hub_jwt_token};
     my $name             = $args{name};
     my $description      = $args{description};
