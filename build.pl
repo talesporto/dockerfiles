@@ -260,19 +260,27 @@ sub hub_set_description {
 }
 
 # Generates the full description for a Docker image.
-# This is run while the current directory is the Docker image's folder,
-# so we check if there is a README.md and if one exists, it is appended to
+# If the Docker image's folder has a README.md, it is appended to
 # the description.
 sub generate_full_description {
-    my ($folder, $description, $file) = @_;
-    my $username = docker_username();
+    my ($folder, $description, $dockerfile) = @_;
+    my $username                = docker_username();
+    my $description_from_readme = get_description_from_readme($folder);
     my $full_description = <<HERE;
 $description
 
-[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/$file)
+[Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/$dockerfile)
+
+$description_from_readme
 
 HERE
 
+    return $full_description;
+}
+
+sub get_description_from_readme {
+    my ($folder) = @_;
+    my $full_description = "";
     if (-r "$folder/README.md") {
         open my $fh, '<', "$folder/README.md";
         while (my $line = <$fh>) {
@@ -280,7 +288,6 @@ HERE
         }
         close $fh;
     }
-
     return $full_description;
 }
 
