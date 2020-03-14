@@ -6,13 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v0.3.0-gwbasic]
+
+### Changed
+
+- Rewrote the launcher in Rust, which brings a small performance benefit.
+
 ## [v0.2.0-gwbasic]
 
 ### Changed
 
-- `gwbasic`: Externalized the configuration of Apache into `.htaccess` file.
-  Changed the way the cgi-bin script gets the BAS file to run (was environment
-  variable, now it's in the query string).
+- Externalized the configuration of Apache into `.htaccess` file. Changed the
+  way the cgi-bin script gets the BAS file to run (was environment variable, now
+  it's in the query string).
 
 ## [v0.1.0-gwbasic]
 
@@ -54,7 +60,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - New GW-Basic dockerfile, as appeared in my
   [related blogpost](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
-[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...HEAD
+[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...HEAD
+[v0.3.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic
 [v0.2.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-gwbasic...v0.2.0-gwbasic
 [v0.1.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/2020-02-22...v0.1.0-gwbasic
 [2020-02-22]: https://github.com/ngeor/dockerfiles/releases/tag/2020-02-22

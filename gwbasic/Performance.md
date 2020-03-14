@@ -208,3 +208,17 @@ After removing the DOSEmu supporting code:
 | Docker (outside) |                 1262.58 |
 | Docker (inside)  |                  749.66 |
 | Apache           |                 1144.05 |
+
+# v0.3.0
+
+Rewrote the launcher script from Ruby into Rust:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1396.28 |
+| Docker (outside) |                 1179.61 |
+| Docker (inside)  |                  663.98 |
+| Apache           |                  994.27 |
+
+It shaves off 100-200msec but the big cost is around launching DOSBox and then
+GW-Basic inside it.

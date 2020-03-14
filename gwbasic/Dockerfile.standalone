@@ -1,6 +1,12 @@
+FROM rust AS builder
+
+WORKDIR /usr/src/myapp
+COPY basic-launcher-rust/ ./
+RUN cargo install --path .
+
 FROM ubuntu
 RUN apt-get update \
-  && apt-get install -y dosbox ruby \
+  && apt-get install -y dosbox \
   && rm -rf /var/lib/apt/lists/*
 
 # Folder structure
@@ -18,11 +24,10 @@ VOLUME [ "/basic/src" ]
 # So that HELLO.BAS without a path is in the correct folder
 WORKDIR /basic/src
 
-COPY run-dos-box.rb /usr/local/bin/
-RUN chmod +x /usr/local/bin/run-dos-box.rb
-
 # Override the location of these tools
 ENV DOSBOX=dosbox
 ENV GWBASIC=/basic/bin/GWBASIC.EXE
 
-ENTRYPOINT ["/usr/local/bin/run-dos-box.rb"]
+COPY --from=builder /usr/local/cargo/bin/basic-launcher-rust /usr/local/bin/
+
+ENTRYPOINT ["/usr/local/bin/basic-launcher-rust"]

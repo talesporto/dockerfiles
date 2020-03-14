@@ -45,8 +45,8 @@ fn now() -> u128 {
 }
 
 fn run_standalone(args: &Args) {
-    let output = Command::new("ruby")
-        .args(&["run-dos-box.rb", "./src/HELLO.BAS"])
+    let output = Command::new("./basic-launcher-rust/target/release/basic-launcher-rust.exe")
+        .args(&["./src/HELLO.BAS"])
         .stdout(if args.quiet {
             Stdio::piped()
         } else {

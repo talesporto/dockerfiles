@@ -1,6 +1,12 @@
+FROM rust AS builder
+
+WORKDIR /usr/src/myapp
+COPY basic-launcher-rust/ ./
+RUN cargo install --path .
+
 FROM httpd
 RUN apt-get update \
-  && apt-get install -y dosbox ruby \
+  && apt-get install -y dosbox \
   && rm -rf /var/lib/apt/lists/*
 COPY my-httpd.conf /usr/local/apache2/conf/httpd.conf
 
@@ -16,13 +22,12 @@ RUN mkdir -p /basic/bin && mkdir -p /basic/src
 VOLUME [ "/basic/bin" ]
 VOLUME [ "/basic/src" ]
 
-COPY run-dos-box.rb /usr/local/bin
-RUN chmod +x /usr/local/bin/run-dos-box.rb
-
 # so that the BAS programs can read/write files in their folder
 RUN chown daemon:www-data /basic/src
 # so that the launcher can create temporary files like batch files
 RUN chown daemon:www-data /basic
+
+COPY --from=builder /usr/local/cargo/bin/basic-launcher-rust /usr/local/bin/
 
 # Override the location of these tools
 ENV DOSBOX=dosbox
