@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use v5.26;
-use Cwd;
 use POSIX qw(strftime);
 use LWP::UserAgent;
 use JSON;
@@ -197,7 +196,7 @@ sub process_image {
     my $username   = docker_username();
     my $fqn        = "$username/$name:$date";
     say "Building folder $folder as $fqn";
-    system("docker build -f $dockerfile -t $fqn $folder") == 0 or die "could not build image $name";
+    system("docker build -f $folder/$dockerfile -t $fqn $folder") == 0 or die "could not build image $name";
     if ($tag) {
         docker_tag_and_push($fqn, "$username/$name:$tag");
     }
