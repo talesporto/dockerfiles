@@ -273,8 +273,8 @@ $description
 
 HERE
 
-    if (-r 'README.md') {
-        open my $fh, '<', 'README.md';
+    if (-r "$folder/README.md") {
+        open my $fh, '<', "$folder/README.md";
         while (my $line = <$fh>) {
             $full_description .= $line;
         }

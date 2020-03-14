@@ -1,6 +1,6 @@
 Performance experiments
 
-# V1 - shell script launcher
+# v0.0.1 - shell script launcher
 
 ## DOS
 
@@ -125,7 +125,7 @@ examples.
 | Docker (inside)  |                  677,75 |
 | Apache           |                 1053,04 |
 
-# V2 - Ruby launcher
+# v0.0.2 - Ruby launcher
 
 The ruby launcher `run-dos-box.rb` is slightly more complicated that the
 original shell `run-dos-box.sh` (e.g. it generated unique temporary filenames
@@ -153,7 +153,7 @@ single command.
 | Docker (inside)  |                  790,02 |
 | Apache           |                 1119,79 |
 
-# V2.1 - Ruby launcher
+# v0.0.3 - Ruby launcher
 
 Dropped support for shebang line. BAS files are not copied to a temporary
 location (as a consequence, they need to be CRLF).
@@ -175,7 +175,7 @@ code:
 | Docker (inside)  |                  816.18 |
 | Apache           |                 1103.62 |
 
-# V2.2 - DOSEMU
+# v0.0.4 - DOSEMU
 
 DosEMU seems to be an alternative to DOSBox, but it looks as if it is not
 maintained. In this experiment we're comparing DOSBox with DOSEmu to see if it
@@ -197,6 +197,8 @@ DOSEmu:
 
 It seems that the performance is similar, so no further action will be taken to
 support it.
+
+# v0.1.0
 
 After removing the DOSEmu supporting code:
 
