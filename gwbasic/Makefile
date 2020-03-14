@@ -1,6 +1,7 @@
 .PHONY: all run-perf perf docker-build-standalone docker-build-httpd clean
 
 PERF_EXE = ./perf/target/release/perf.exe
+PERF_COUNT = 1
 GWBASIC_EXE = ./bin/GWBASIC.EXE
 # TODO fix hardcoded unix PWD
 PWD_UNIX = /c/Users/ngeor/Projects/github/dockerfiles/gwbasic
@@ -8,7 +9,7 @@ PWD_UNIX = /c/Users/ngeor/Projects/github/dockerfiles/gwbasic
 all: perf docker-build-standalone docker-build-httpd
 
 run-perf: perf
-	GWBASIC=$(GWBASIC_EXE) $(PERF_EXE)
+	GWBASIC=$(GWBASIC_EXE) $(PERF_EXE) --count $(PERF_COUNT)
 
 perf: $(PERF_EXE)
 

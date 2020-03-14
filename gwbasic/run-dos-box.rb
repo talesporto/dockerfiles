@@ -80,7 +80,7 @@ class Arguments
 
   def parse_program
     res = if ARGV.empty?
-            parse_program_from_env
+            parse_program_from_query_string
           else
             ARGV[0] || ''
           end
@@ -92,9 +92,15 @@ class Arguments
     correct_path(File.realpath(res))
   end
 
-  def parse_program_from_env
-    if ENV['BAS']
-      "/basic/src/#{ENV['BAS']}"
+  def parse_program_from_query_string
+    if ENV['QUERY_STRING']
+      b = ENV['QUERY_STRING'].split('&').select { |x| x.start_with?('_bas=') }
+      return '' if b.empty?
+
+      kv = b[0].split('=')
+      return '' if kv.size != 2
+
+      "/basic/src/#{kv[1]}"
     else
       ''
     end
