@@ -1,8 +1,10 @@
 # dockerfiles
 
-A home for my various custom Docker images.
+> A home for my various custom Docker images.
 
 [![Build Status](https://travis-ci.org/ngeor/dockerfiles.svg?branch=master)](https://travis-ci.org/ngeor/dockerfiles)
+
+## Images
 
 | Image                           | Base image                  | Main features                    | Extra                                                     | Pulls                                                                                        |
 | ------------------------------- | --------------------------- | -------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -37,3 +39,15 @@ Docker images that include helm, kubectl, and terraform.
 [python-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/python-helm-kubectl-terraform/
 [ruby-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/ruby-helm-kubectl-terraform/
 [swagger-to-diagram]: https://hub.docker.com/r/ngeor/swagger-to-diagram/
+
+## Building and releasing
+
+To avoid rebuilding everything, images will only be built if:
+
+- their folder has changes
+- there is a tag in the format of `vX.Y.Z-folder`
+
+If an image is built, it will be released when:
+
+- building on the master branch, in which case it is tagged as `latest`
+- building on a tag `vX.Y.Z-folder`, in which case it is tagged as `vX.Y.Z`
