@@ -1,12 +1,23 @@
 #!/bin/bash
 set -e
+
 COUNT=$1
-while [[ $COUNT -gt 0 ]]; do
-  if [[ "$2" == "--quiet" ]]; then
+
+if [[ "$BLR_BASIC_MODE" == "qbasic" ]]; then
+  PROGRAM=/basic/src/HELLOQB.BAS
+else
+  PROGRAM=/basic/src/HELLO.BAS
+fi
+
+if [[ "$2" == "--quiet" ]]; then
+  while [[ $COUNT -gt 0 ]]; do
     printf '.'
-    /usr/local/bin/basic-launcher-rust /basic/src/HELLO.BAS > /dev/null
-  else
-    /usr/local/bin/basic-launcher-rust /basic/src/HELLO.BAS
-  fi
-  COUNT=$((COUNT-1))
-done
+    /usr/local/bin/basic-launcher-rust $PROGRAM > /dev/null
+    COUNT=$((COUNT-1))
+  done
+else
+  while [[ $COUNT -gt 0 ]]; do
+    /usr/local/bin/basic-launcher-rust $PROGRAM
+    COUNT=$((COUNT-1))
+  done
+fi

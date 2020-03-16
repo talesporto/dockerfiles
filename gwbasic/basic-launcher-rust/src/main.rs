@@ -54,7 +54,7 @@ fn run_dosbox(options: &options::Options, temp_files: &TempFiles) {
     let log_file = File::create(&temp_files.dosbox_log_file).unwrap();
     let err_file = File::create(&temp_files.dosbox_err_file).unwrap();
     let out = Command::new(&options.dosbox)
-        .args(&[&batch_file, "-exit", "-noautoexec"])
+        .args(&[&batch_file, "-exit", "-noautoexec", "-conf", &options.dosbox_conf])
         .env("SDL_VIDEODRIVER", "dummy")
         .env("TERM", "dumb")
         .stdout(log_file)

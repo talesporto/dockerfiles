@@ -8,6 +8,15 @@ use std::time::SystemTime;
 struct Args {
     count: i32,
     quiet: bool,
+    qbasic: bool,
+}
+
+fn copy_env(key: &str) -> String {
+    format!("{}={}", key, env::var(key).unwrap_or_default())
+}
+
+fn copy_basic_mode() -> String {
+    copy_env("BLR_BASIC_MODE")
 }
 
 impl Args {
@@ -45,8 +54,9 @@ fn now() -> u128 {
 }
 
 fn run_standalone(args: &Args) {
+    let program = if args.qbasic { "./src/HELLOQB.BAS" } else { "./src/HELLO.BAS" };
     let output = Command::new("./basic-launcher-rust/target/release/basic-launcher-rust.exe")
-        .args(&["./src/HELLO.BAS"])
+        .args(&[program])
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -111,6 +121,8 @@ fn build_image(args: &Args) {
 fn run_docker_outside(args: &Args) {
     let bin_volume_spec = format!("{}/bin:/basic/bin", current_dir_as_msys_path());
     let src_volume_spec = format!("{}/src:/basic/src", current_dir_as_msys_path());
+    let program = if args.qbasic { "HELLOQB.BAS" } else { "HELLO.BAS" };
+    let basic_mode = copy_basic_mode();
     let run_args = vec![
         "run",
         "--rm",
@@ -118,8 +130,10 @@ fn run_docker_outside(args: &Args) {
         &bin_volume_spec,
         "-v",
         &src_volume_spec,
+        "-e",
+        &basic_mode,
         "gwbasic",
-        "HELLO.BAS",
+        program,
     ];
     let output = Command::new("docker")
         .args(run_args)
@@ -160,6 +174,8 @@ fn docker_inside_experiment(args: &Args) -> f64 {
     let src_volume_spec = format!("{}/src:/basic/src", current_dir_as_msys_path());
     let perf_volume_spec = format!("{}/perf:/usr/local/perf/bin:ro", current_dir_as_msys_path());
     let fmt_count = args.count.to_string();
+    let basic_mode = copy_basic_mode();
+
     let mut run_args = vec![
         "run",
         "--rm",
@@ -169,6 +185,8 @@ fn docker_inside_experiment(args: &Args) -> f64 {
         &src_volume_spec,
         "-v",
         &perf_volume_spec,
+        "-e",
+        &basic_mode,
         "--entrypoint",
         "bash",
         "gwbasic",
@@ -223,7 +241,13 @@ fn build_httpd_image(args: &Args) {
 fn start_httpd(args: &Args) {
     println!("Starting HTTPD");
     let bin_volume_spec = format!("{}/bin:/basic/bin", current_dir_as_msys_path());
-    let src_volume_spec = format!("{}/rest:/basic/src", current_dir_as_msys_path());
+    let src_volume_spec = if args.qbasic {
+        format!("{}/rest-qb:/basic/src", current_dir_as_msys_path())
+    } else {
+        format!("{}/rest:/basic/src", current_dir_as_msys_path())
+    };
+    let basic_mode = copy_basic_mode();
+
     let run_args = vec![
         "run",
         "--rm",
@@ -232,6 +256,8 @@ fn start_httpd(args: &Args) {
         "gwbasic-httpd",
         "-p",
         "8080:80",
+        "-e",
+        &basic_mode,
         "-v",
         &bin_volume_spec,
         "-v",
@@ -323,6 +349,7 @@ fn main() {
     let mut args = Args {
         count: 100,
         quiet: false,
+        qbasic: env::var("BLR_BASIC_MODE").unwrap_or_default() == "qbasic"
     };
     args.parse();
     let dos_average = dos_experiment(&args);

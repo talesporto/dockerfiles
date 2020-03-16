@@ -222,3 +222,49 @@ Rewrote the launcher script from Ruby into Rust:
 
 It shaves off 100-200msec but the big cost is around launching DOSBox and then
 GW-Basic inside it.
+
+# Unreleased
+
+## Added support for QBasic
+
+GW-Basic:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                  1286.6 |
+| Docker (outside) |                    1228 |
+| Docker (inside)  |                   782.2 |
+| Apache           |                  1013.2 |
+
+QBasic:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                    2398 |
+| Docker (outside) |                    2248 |
+| Docker (inside)  |                  1869.4 |
+| Apache           |                  2175.4 |
+
+QBasic is significantly slower on the same hello world program.
+
+## Using a custom DOSBox config file
+
+GW-Basic:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1161.55 |
+| Docker (outside) |                 1225.38 |
+| Docker (inside)  |                  695.95 |
+| Apache           |                    1180 |
+
+QBasic:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1748.61 |
+| Docker (outside) |                 1848.97 |
+| Docker (inside)  |                  1287.5 |
+| Apache           |                  1574.5 |
+
+The custom config file improves QBasic's performance significantly.

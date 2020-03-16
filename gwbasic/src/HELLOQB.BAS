@@ -1,2 +1,2 @@
-PRINT "Hello, world!"
+PRINT "Hello, world! From QBasic!"
 SYSTEM

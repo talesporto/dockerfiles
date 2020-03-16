@@ -27,16 +27,32 @@ pub fn create_batch_file(options: &Options, temp_files: &TempFiles) -> Result<()
     )?;
     // C:\BIN\GWBASIC.EXE
     write!(f, "{}", from_dos(&options.basic, &temp_files.batch_dir))?;
-    write!(f, "{}", match options.mode {
-        BasicMode::GWBasic => " ",
-        BasicMode::QBasic => " /RUN ",
-    })?;
+    write!(
+        f,
+        "{}",
+        match options.mode {
+            BasicMode::GWBasic => " ",
+            BasicMode::QBasic => " /RUN ",
+        }
+    )?;
     // PROGRAM.BAS
-    write!(f, "{}", options.program.file_name().unwrap().to_str().unwrap())?;
+    write!(
+        f,
+        "{}",
+        options.program.file_name().unwrap().to_str().unwrap()
+    )?;
     // <C:\STDIN.TXT
-    write!(f, " <{}", from_dos(&temp_files.stdin_file, &temp_files.batch_dir))?;
+    write!(
+        f,
+        " <{}",
+        from_dos(&temp_files.stdin_file, &temp_files.batch_dir)
+    )?;
     // >C:\STDOUT.TXT
-    write!(f, " >{}\r\n", from_dos(&temp_files.stdout_file, &temp_files.batch_dir))
+    write!(
+        f,
+        " >{}\r\n",
+        from_dos(&temp_files.stdout_file, &temp_files.batch_dir)
+    )
 }
 
 fn from_dos(f: &PathBuf, batch_dir: &PathBuf) -> String {
@@ -58,7 +74,7 @@ fn from_dos(f: &PathBuf, batch_dir: &PathBuf) -> String {
     result
 }
 
-fn copy_env(f: &mut File)  -> Result<(), io::Error> {
+fn copy_env(f: &mut File) -> Result<(), io::Error> {
     for kv in env::vars() {
         if is_valid_env_key(&kv.0) && is_valid_env_value(&kv.1) {
             write!(f, "SET {}={}\r\n", kv.0, kv.1)?;
@@ -67,20 +83,23 @@ fn copy_env(f: &mut File)  -> Result<(), io::Error> {
     Ok(())
 }
 
+/// Environment variables that are allowed to appear in the Batch file.
+const WHITE_LIST_KEYS: &[&str] = &[
+    "CONTENT_TYPE",
+    "QUERY_STRING",
+    "REQUEST_METHOD",
+    "STDIN",
+];
+
 fn is_valid_env_key(key: &str) -> bool {
-    if key.is_empty() {
-        false
-    } else {
-        key.chars().all(|c| (c >= 'A' && c <= 'Z') || c == '_')
+    match WHITE_LIST_KEYS.binary_search(&key) {
+        Ok(_) => true,
+        _ => false
     }
 }
 
 fn is_valid_env_value(val: &str) -> bool {
-    if val.is_empty() {
-        false
-    } else {
-        !val.contains(" ")
-    }
+    !val.is_empty()
 }
 
 #[cfg(test)]

@@ -1,8 +1,0 @@
-root = false
-
-# Files that have shebang must be LF
-[*.{rb,sh}]
-end_of_line = lf
-
-[*.bas]
-end_of_line = crlf

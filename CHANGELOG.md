@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Full support for QBasic, including performance measurement
+- Improved performance of DOSBox by configuring CPU and MIDI settings
+
+### Changed
+
+- Environment variables that control the launcher are prefixed with `BLR_`
+- Whitelisting only specific environment variables for the BAS file, because too
+  many environment variables cause the program to fail.
+- Launcher script reads the `REDIRECT_` environment variables that mod_rewrite
+  sets.
+
 ## [v0.3.0-gwbasic]
 
 ### Changed
@@ -61,7 +74,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   [related blogpost](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
 [unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...HEAD
-[v0.3.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic
-[v0.2.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-gwbasic...v0.2.0-gwbasic
-[v0.1.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/2020-02-22...v0.1.0-gwbasic
+[v0.3.0-gwbasic]:
+  https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic
+[v0.2.0-gwbasic]:
+  https://github.com/ngeor/dockerfiles/compare/v0.1.0-gwbasic...v0.2.0-gwbasic
+[v0.1.0-gwbasic]:
+  https://github.com/ngeor/dockerfiles/compare/2020-02-22...v0.1.0-gwbasic
 [2020-02-22]: https://github.com/ngeor/dockerfiles/releases/tag/2020-02-22
