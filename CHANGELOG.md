@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Full support for QBasic, including performance measurement
 - Improved performance of DOSBox by configuring CPU and MIDI settings
+- Added `dockerv` command to make life easier working with Docker Toolbox on
+  Windows.
 
 ### Changed
 
