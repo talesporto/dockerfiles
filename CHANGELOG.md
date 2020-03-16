@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   many environment variables cause the program to fail.
 - Launcher script reads the `REDIRECT_` environment variables that mod_rewrite
   sets.
+- Merged all QBasic REST API programs in one QBasic program for maintainability.
 
 ## [v0.3.0-gwbasic]
 

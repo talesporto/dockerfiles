@@ -268,3 +268,14 @@ QBasic:
 | Apache           |                  1574.5 |
 
 The custom config file improves QBasic's performance significantly.
+
+## Merged all QBasic REST API programs into one
+
+For maintainability, merged all REST API QBasic programs into one file:
+
+| Experiment       | Average duration (msec) |
+| ---------------- | ----------------------: |
+| DOS              |                 1717.74 |
+| Docker (outside) |                 1769.74 |
+| Docker (inside)  |                 1269.44 |
+| Apache           |                 1621.27 |
