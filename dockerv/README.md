@@ -68,5 +68,6 @@ is translated to:
 
 ## Installing
 
-The latest binary is in the releases. To build from source, use Rust and run
-`cargo install -path .`.
+The latest binary is in the [releases](https://github.com/ngeor/dockerfiles/releases/download/v0.1.0-dockerv/dockerv.exe).
+
+To build from source, use Rust and run `cargo install -path .`.
