@@ -223,7 +223,7 @@ Rewrote the launcher script from Ruby into Rust:
 It shaves off 100-200msec but the big cost is around launching DOSBox and then
 GW-Basic inside it.
 
-# Unreleased
+# v0.4.0
 
 ## Added support for QBasic
 
