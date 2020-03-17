@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v0.1.0-dockerv]
+
 ### Added
 
 - Added `dockerv` command to make life easier working with Docker Toolbox on
@@ -81,11 +83,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - New GW-Basic dockerfile, as appeared in my
   [related blogpost](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
-[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...HEAD
-[v0.3.0-gwbasic]:
-  https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic
-[v0.2.0-gwbasic]:
-  https://github.com/ngeor/dockerfiles/compare/v0.1.0-gwbasic...v0.2.0-gwbasic
-[v0.1.0-gwbasic]:
-  https://github.com/ngeor/dockerfiles/compare/2020-02-22...v0.1.0-gwbasic
+[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-dockerv...HEAD
+[v0.1.0-dockerv]: https://github.com/ngeor/dockerfiles/compare/v0.4.0-gwbasic...v0.1.0-dockerv
+[v0.4.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...v0.4.0-gwbasic
+[v0.3.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic
+[v0.2.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-gwbasic...v0.2.0-gwbasic
+[v0.1.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/2020-02-22...v0.1.0-gwbasic
 [2020-02-22]: https://github.com/ngeor/dockerfiles/releases/tag/2020-02-22
