@@ -260,18 +260,23 @@ sub hub_set_description {
 }
 
 # Generates the full description for a Docker image.
-# If the Docker image's folder has a README.md, it is appended to
-# the description.
+# If the Docker image's folder has a README.md, it will be used instead of
+# the description argument.
 sub generate_full_description {
     my ($folder, $description, $dockerfile) = @_;
     my $username                = docker_username();
     my $description_from_readme = get_description_from_readme($folder);
+    my $final_description       = $description_from_readme || $description;
     my $full_description = <<HERE;
-$description
+$final_description
+
+# Dockerfile link
 
 [Dockerfile](https://github.com/$username/dockerfiles/blob/master/$folder/$dockerfile)
 
-$description_from_readme
+# Support link
+
+[Support](https://ngeor.com/support/)
 
 HERE
 
