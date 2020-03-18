@@ -48,9 +48,11 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
 
     pub fn interpret(&mut self) -> std::io::Result<()> {
         let p = self.parser.parse()?;
-        match p {
-            TopLevelToken::SubCall(name, args) => self._sub_call(name, args),
-            _ => (),
+        for t in p.tokens {
+            match t {
+                TopLevelToken::SubCall(name, args) => self._sub_call(name, args),
+                _ => (),
+            }
         }
         Ok(())
     }
@@ -64,6 +66,8 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
                 }
                 println!("")
             }
+        } else {
+            panic!("Unknown sub {}", name);
         }
     }
 }
