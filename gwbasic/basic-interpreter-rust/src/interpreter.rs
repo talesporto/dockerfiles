@@ -11,9 +11,7 @@ pub trait Stdlib {
     fn system(&self);
 }
 
-pub struct DefaultStdlib {
-
-}
+pub struct DefaultStdlib {}
 
 impl Stdlib for DefaultStdlib {
     fn print(&self, args: Vec<String>) {
@@ -29,7 +27,6 @@ impl Stdlib for DefaultStdlib {
     }
 }
 
-
 pub struct Interpreter<T, S> {
     parser: Parser<T>,
     stdlib: S,
@@ -43,7 +40,10 @@ impl<T: BufRead> Interpreter<T, DefaultStdlib> {
 
 impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
     pub fn with_stdlib(r: T, stdlib: S) -> Interpreter<T, S> {
-        Interpreter { parser: Parser::new(r), stdlib }
+        Interpreter {
+            parser: Parser::new(r),
+            stdlib,
+        }
     }
 
     pub fn interpret(&mut self) -> std::io::Result<()> {
@@ -59,13 +59,16 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
 
     fn _sub_call(&mut self, name: String, args: Vec<Expression>) {
         if name == "PRINT" {
+            let mut strings: Vec<String> = vec![];
             for a in args {
                 match a {
-                    Expression::StringLiteral(s) => print!("{}", s),
+                    Expression::StringLiteral(s) => strings.push(format!("{}", s)),
                     _ => (),
                 }
-                println!("")
             }
+            self.stdlib.print(strings)
+        } else if name == "SYSTEM" {
+            self.stdlib.system()
         } else {
             panic!("Unknown sub {}", name);
         }
@@ -75,13 +78,10 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::Lexer;
+    use std::fs::File;
     use std::io::{BufReader, Cursor};
 
-
-    pub struct MockStdlib {
-
-    }
+    pub struct MockStdlib {}
 
     impl Stdlib for MockStdlib {
         fn print(&self, args: Vec<String>) {
@@ -93,6 +93,7 @@ mod tests {
         }
 
         fn system(&self) {
+            println!("would have exited")
         }
     }
 
@@ -101,8 +102,32 @@ mod tests {
         let input = b"PRINT \"Hello, world!\"";
         let c = Cursor::new(input);
         let reader = BufReader::new(c);
-        let stdlib = MockStdlib{};
+        let stdlib = MockStdlib {};
         let mut interpreter = Interpreter::with_stdlib(reader, stdlib);
+        interpreter.interpret().unwrap();
+    }
+
+    #[test]
+    fn test_interpreter_fixture_hello1() {
+        let stdlib = MockStdlib {};
+        let mut interpreter =
+            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO1.BAS").unwrap()), stdlib);
+        interpreter.interpret().unwrap();
+    }
+
+    #[test]
+    fn test_interpreter_fixture_hello2() {
+        let stdlib = MockStdlib {};
+        let mut interpreter =
+            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO2.BAS").unwrap()), stdlib);
+        interpreter.interpret().unwrap();
+    }
+
+    #[test]
+    fn test_interpreter_fixture_hello_s() {
+        let stdlib = MockStdlib {};
+        let mut interpreter =
+            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO_S.BAS").unwrap()), stdlib);
         interpreter.interpret().unwrap();
     }
 }
