@@ -1,8 +1,8 @@
+mod common;
 mod interpreter;
 mod lexer;
 mod parser;
 mod reader;
-
 use std::env;
 use std::fs::File;
 use std::io::BufReader;

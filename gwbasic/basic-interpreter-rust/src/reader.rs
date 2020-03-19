@@ -1,5 +1,5 @@
+use crate::common::Result;
 use std::io::prelude::*;
-use std::io::{Error, ErrorKind};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum CharOrEof {
@@ -50,21 +50,21 @@ impl<T: BufRead> CharOrEofReader<T> {
         }
     }
 
-    pub fn read(&mut self) -> std::io::Result<CharOrEof> {
+    pub fn read(&mut self) -> Result<CharOrEof> {
         self._fill_buffer_if_empty()?;
         Ok(self._buffer[0])
     }
 
-    pub fn consume(&mut self) -> std::io::Result<CharOrEof> {
+    pub fn consume(&mut self) -> Result<CharOrEof> {
         if self._buffer.is_empty() {
-            Err(Error::new(ErrorKind::Other, "Buffer underrun"))
+            Err("Buffer underrun".to_string())
         } else {
             self._pos.inc_col();
             Ok(self._buffer.remove(0))
         }
     }
 
-    pub fn read_and_consume(&mut self) -> std::io::Result<CharOrEof> {
+    pub fn read_and_consume(&mut self) -> Result<CharOrEof> {
         self._fill_buffer_if_empty()?;
         self._pos.inc_col();
         Ok(self._buffer.remove(0))
@@ -74,22 +74,32 @@ impl<T: BufRead> CharOrEofReader<T> {
         self._pos
     }
 
-    fn _fill_buffer_if_empty(&mut self) -> std::io::Result<()> {
+    fn _fill_buffer_if_empty(&mut self) -> Result<()> {
         if self._buffer.is_empty() {
-            let mut line = String::new();
-            let bytes_read = self.reader.read_line(&mut line)?;
-            if bytes_read <= 0 {
-                self._buffer.push(CharOrEof::EOF);
-            } else {
-                self._pos.inc_row();
-                for c in line.chars() {
-                    self._buffer.push(CharOrEof::Char(c))
-                }
-                if self._buffer.is_empty() {
-                    panic!("Should have found at least one character")
-                }
-            }
+            self._fill_buffer()
+        } else {
+            Ok(())
         }
-        Ok(())
+    }
+
+    fn _fill_buffer(&mut self) -> Result<()> {
+        let mut line = String::new();
+        match self.reader.read_line(&mut line) {
+            Ok(bytes_read) => {
+                if bytes_read <= 0 {
+                    self._buffer.push(CharOrEof::EOF);
+                } else {
+                    self._pos.inc_row();
+                    for c in line.chars() {
+                        self._buffer.push(CharOrEof::Char(c))
+                    }
+                    if self._buffer.is_empty() {
+                        panic!("Should have found at least one character")
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => Err(e.to_string()),
+        }
     }
 }

@@ -1,15 +1,11 @@
+use crate::common::Result;
 use crate::reader::*;
 use std::io::prelude::*;
 
-// TODO: line-col range per lexeme
-// TODO: CRLF
-// TODO: add QBasic keywords as separate tokens
+pub type LexerResult = Result<Lexeme>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Lexeme {
-    /// Unknown lexeme
-    Unknown(char),
-
     /// EOF
     EOF,
 
@@ -84,7 +80,7 @@ impl<T: BufRead> Lexer<T> {
         }
     }
 
-    pub fn read(&mut self) -> std::io::Result<Lexeme> {
+    pub fn read(&mut self) -> LexerResult {
         self._last_pos = self.reader.pos();
         let x = self.reader.read_and_consume()?;
         match x {
@@ -101,7 +97,7 @@ impl<T: BufRead> Lexer<T> {
                 } else if ch == '\r' {
                     self._read_cr_lf()
                 } else {
-                    Ok(Lexeme::Unknown(ch))
+                    Err(format!("[lexer] Unexpected character {}", ch))
                 }
             }
         }
@@ -111,11 +107,7 @@ impl<T: BufRead> Lexer<T> {
         self._last_pos
     }
 
-    fn _read_while(
-        &mut self,
-        initial: char,
-        predicate: fn(char) -> bool,
-    ) -> std::io::Result<String> {
+    fn _read_while(&mut self, initial: char, predicate: fn(char) -> bool) -> Result<String> {
         let mut result: String = String::new();
         result.push(initial);
 
@@ -139,7 +131,7 @@ impl<T: BufRead> Lexer<T> {
         Ok(result)
     }
 
-    fn _read_cr_lf(&mut self) -> std::io::Result<Lexeme> {
+    fn _read_cr_lf(&mut self) -> LexerResult {
         let next = self.reader.read()?;
         if let CharOrEof::Char('\n') = next {
             self.reader.consume()?;

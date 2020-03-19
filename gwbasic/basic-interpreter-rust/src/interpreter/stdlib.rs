@@ -1,0 +1,31 @@
+/// The standard functions that QBasic offers
+pub trait Stdlib {
+    /// Implementation of PRINT x[, y, z]
+    fn print(&self, args: Vec<String>);
+
+    /// Implementation of SYSTEM
+    fn system(&self);
+
+    /// Implementation of INPUT
+    fn input(&self, args: Vec<String>);
+}
+
+pub struct DefaultStdlib {}
+
+impl Stdlib for DefaultStdlib {
+    fn print(&self, args: Vec<String>) {
+        for a in args {
+            print!("{}", a)
+        }
+
+        println!("")
+    }
+
+    fn system(&self) {
+        std::process::exit(0)
+    }
+
+    fn input(&self, args: Vec<String>) {
+        unimplemented!();
+    }
+}

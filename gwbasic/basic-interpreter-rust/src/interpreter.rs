@@ -1,31 +1,10 @@
 use crate::parser::*;
+use crate::common::Result;
 use std::io::prelude::*;
-use std::io::{Error, ErrorKind};
 
-/// The standard functions that QBasic offers
-pub trait Stdlib {
-    /// Implementation of PRINT x[, y, z]
-    fn print(&self, args: Vec<String>);
+mod stdlib;
 
-    /// Implementation of SYSTEM
-    fn system(&self);
-}
-
-pub struct DefaultStdlib {}
-
-impl Stdlib for DefaultStdlib {
-    fn print(&self, args: Vec<String>) {
-        for a in args {
-            print!("{}", a)
-        }
-
-        println!("")
-    }
-
-    fn system(&self) {
-        std::process::exit(0)
-    }
-}
+use self::stdlib::{Stdlib, DefaultStdlib};
 
 pub struct Interpreter<T, S> {
     parser: Parser<T>,
@@ -46,18 +25,18 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
         }
     }
 
-    pub fn interpret(&mut self) -> std::io::Result<()> {
+    pub fn interpret(&mut self) -> Result<()> {
         let p = self.parser.parse()?;
         for t in p.tokens {
             match t {
-                TopLevelToken::SubCall(name, args) => self._sub_call(name, args),
+                TopLevelToken::SubCall(name, args) => self._sub_call(name, args)?,
                 _ => (),
             }
         }
         Ok(())
     }
 
-    fn _sub_call(&mut self, name: String, args: Vec<Expression>) {
+    fn _sub_call(&mut self, name: String, args: Vec<Expression>) -> Result<()> {
         if name == "PRINT" {
             let mut strings: Vec<String> = vec![];
             for a in args {
@@ -66,11 +45,16 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
                     _ => (),
                 }
             }
-            self.stdlib.print(strings)
+            self.stdlib.print(strings);
+            Ok(())
+        } else if name == "INPUT" {
+            unimplemented!();
+            Ok(())
         } else if name == "SYSTEM" {
-            self.stdlib.system()
+            self.stdlib.system();
+            Ok(())
         } else {
-            panic!("Unknown sub {}", name);
+            Err(format!("Unknown sub {}", name))
         }
     }
 }
@@ -95,6 +79,10 @@ mod tests {
         fn system(&self) {
             println!("would have exited")
         }
+
+        fn input(&self, args: Vec<String>) {
+            unimplemented!();
+        }
     }
 
     #[test]
@@ -107,27 +95,42 @@ mod tests {
         interpreter.interpret().unwrap();
     }
 
+    fn test_file(filename: &str, stdlib: MockStdlib) {
+        let file_path = format!("fixtures/{}", filename);
+        let file =
+            File::open(file_path).expect(format!("Could not read file {}", filename).as_ref());
+        let reader = BufReader::new(file);
+        let mut interpreter = Interpreter::with_stdlib(reader, stdlib);
+        interpreter.interpret().unwrap();
+    }
+
     #[test]
     fn test_interpreter_fixture_hello1() {
         let stdlib = MockStdlib {};
-        let mut interpreter =
-            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO1.BAS").unwrap()), stdlib);
-        interpreter.interpret().unwrap();
+        test_file("HELLO1.BAS", stdlib);
     }
 
     #[test]
     fn test_interpreter_fixture_hello2() {
         let stdlib = MockStdlib {};
-        let mut interpreter =
-            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO2.BAS").unwrap()), stdlib);
-        interpreter.interpret().unwrap();
+        test_file("HELLO2.BAS", stdlib);
     }
 
     #[test]
     fn test_interpreter_fixture_hello_s() {
         let stdlib = MockStdlib {};
-        let mut interpreter =
-            Interpreter::with_stdlib(BufReader::new(File::open("fixtures/HELLO_S.BAS").unwrap()), stdlib);
-        interpreter.interpret().unwrap();
+        test_file("HELLO_S.BAS", stdlib);
+    }
+
+    #[test]
+    fn test_interpreter_fixture_fib() {
+        let stdlib = MockStdlib {};
+        test_file("FIB.BAS", stdlib);
+    }
+
+    #[test]
+    fn test_interpreter_fixture_input() {
+        let stdlib = MockStdlib {};
+        test_file("INPUT.BAS", stdlib);
     }
 }
