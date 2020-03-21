@@ -70,6 +70,9 @@ fn _is_symbol(ch: char) -> bool {
         || ch == '-'
         || ch == '*'
         || ch == '/'
+        || ch == '('
+        || ch == ')'
+        || ch == '='
 }
 
 impl<T: BufRead> Lexer<T> {
@@ -139,6 +142,122 @@ impl<T: BufRead> Lexer<T> {
         } else {
             Ok(Lexeme::CR)
         }
+    }
+}
+
+pub struct BufLexer<T> {
+    lexer: Lexer<T>,
+    _last_read_lexeme: Option<Lexeme>
+}
+
+impl<T: BufRead> BufLexer<T> {
+    pub fn new(reader: T) -> BufLexer<T> {
+        BufLexer {
+            lexer: Lexer::new(reader),
+            _last_read_lexeme: None,
+        }
+    }
+
+    /// Reads the next lexeme.
+    /// The lexeme is stored and no further reads will be done unless
+    /// consume is called.
+    pub fn read(&mut self) -> LexerResult {
+        match self._last_read_lexeme.clone() {
+            Some(x) => Ok(x),
+            None => {
+                let new_lexeme = self.lexer.read()?;
+                self._last_read_lexeme = Some(new_lexeme.clone());
+                Ok(new_lexeme)
+            }
+        }
+    }
+
+    /// Consumes the previously read lexeme, allowing further reads.
+    pub fn consume(&mut self) {
+        self._last_read_lexeme = match self._last_read_lexeme {
+            None => panic!("No previously read lexeme!"),
+            Some(_) => None,
+        }
+    }
+
+    /// Tries to read the given word. If the next lexeme is this particular word,
+    /// it consumes it and it returns true.
+    pub fn try_consume_word(&mut self, word: &str) -> Result<bool> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Word(w) => {
+                if w == word {
+                    self.consume();
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            },
+            _ => Ok(false)
+        }
+    }
+
+    pub fn try_consume_symbol(&mut self, ch: char) -> Result<bool> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Symbol(w) => {
+                if w == ch {
+                    self.consume();
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            },
+            _ => Ok(false)
+        }
+    }
+
+    pub fn demand_word(&mut self) -> Result<String> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Word(w) => {
+                self.consume();
+                Ok(w)
+            },
+            _ => Err(format!("Expected word, found {:?}", lexeme))
+        }
+    }
+
+    pub fn demand_symbol(&mut self, ch: char) -> Result<()> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Symbol(s) => {
+                if s == ch {
+                    self.consume();
+                    Ok(())
+                } else {
+                    Err(format!("Expected symbol {}, found {}", ch, s))
+                }
+            },
+            _ => Err(format!("Expected symbol {}, found {:?}", ch, lexeme))
+        }
+    }
+
+    pub fn demand_eol_or_eof(&mut self) -> Result<()> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::CR | Lexeme::CRLF | Lexeme::LF | Lexeme::EOF => {
+                self.consume();
+                Ok(())
+            },
+            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme))
+        }
+    }
+
+    pub fn skip_whitespace(&mut self) -> Result<()> {
+        loop {
+            let lexeme = self.read()?;
+            match lexeme {
+                Lexeme::Whitespace(_) => self.consume(),
+                _ => break,
+            }
+        }
+        Ok(())
     }
 }
 

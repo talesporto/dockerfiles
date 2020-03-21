@@ -2,6 +2,21 @@ use crate::common::Result;
 use crate::lexer::*;
 use std::io::prelude::*;
 
+mod declaration;
+
+#[derive(Debug, PartialEq)]
+pub enum TypeQualifier {
+    None,
+    BangInteger,
+    DollarSignString
+}
+
+#[derive(Debug, PartialEq)]
+pub struct NameWithTypeQualifier {
+    pub name: String,
+    pub type_qualifier: TypeQualifier,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     StringLiteral(String),
@@ -13,8 +28,7 @@ pub enum Expression {
 pub enum TopLevelToken {
     EOF,
     SubCall(String, Vec<Expression>),
-    SubDeclaration,
-    SubImplementation,
+    FunctionDeclaration(NameWithTypeQualifier, Vec<NameWithTypeQualifier>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -23,37 +37,13 @@ pub struct Program {
 }
 
 pub struct Parser<T> {
-    lexer: Lexer<T>,
-    _last_read_lexeme: Option<Lexeme>,
+    buf_lexer: BufLexer<T>,
 }
 
 impl<T: BufRead> Parser<T> {
     pub fn new(reader: T) -> Parser<T> {
         Parser {
-            lexer: Lexer::new(reader),
-            _last_read_lexeme: None,
-        }
-    }
-
-    /// Reads the next lexeme.
-    /// The lexeme is stored and no further reads will be done unless
-    /// _consume_lexeme is called.
-    fn _read_lexeme(&mut self) -> LexerResult {
-        match self._last_read_lexeme.clone() {
-            Some(x) => Ok(x),
-            None => {
-                let new_lexeme = self.lexer.read()?;
-                self._last_read_lexeme = Some(new_lexeme.clone());
-                Ok(new_lexeme)
-            }
-        }
-    }
-
-    /// Consumes the previously read lexeme, allowing further reads.
-    fn _consume_lexeme(&mut self) {
-        self._last_read_lexeme = match self._last_read_lexeme {
-            None => panic!("No previously read lexeme!"),
-            Some(_) => None,
+            buf_lexer: BufLexer::new(reader),
         }
     }
 
@@ -70,32 +60,26 @@ impl<T: BufRead> Parser<T> {
     }
 
     fn _parse_one(&mut self) -> Result<TopLevelToken> {
-        let lexeme = self._read_lexeme()?;
-        self._consume_lexeme();
-        match lexeme {
-            Lexeme::Word(s) => self._parse_sub_call(s),
-            Lexeme::EOF => Ok(TopLevelToken::EOF),
-            _ => Err("Unexpected lexeme".to_string()),
-        }
-    }
-
-    fn _skip_whitespace(&mut self) -> Result<()> {
-        loop {
-            let lexeme = self._read_lexeme()?;
-            match lexeme {
-                Lexeme::Whitespace(_) => self._consume_lexeme(),
-                _ => break,
+        match self.try_parse_declaration()? {
+            Some(d) => Ok(d),
+            None => {
+                let lexeme = self.buf_lexer.read()?;
+                self.buf_lexer.consume();
+                match lexeme {
+                    Lexeme::Word(s) => self._parse_sub_call(s),
+                    Lexeme::EOF => Ok(TopLevelToken::EOF),
+                    _ => Err(format!("Unexpected lexeme {:?}", lexeme)),
+                }
             }
         }
-        Ok(())
     }
 
     fn _skip_whitespace_and_new_lines(&mut self) -> Result<()> {
         loop {
-            let lexeme = self._read_lexeme()?;
+            let lexeme = self.buf_lexer.read()?;
             match lexeme {
                 Lexeme::Whitespace(_) | Lexeme::CRLF | Lexeme::CR | Lexeme::LF => {
-                    self._consume_lexeme()
+                    self.buf_lexer.consume()
                 }
                 _ => break,
             }
@@ -115,7 +99,7 @@ impl<T: BufRead> Parser<T> {
                 let optional_next_arg = self._read_argument()?;
                 match optional_next_arg {
                     Some(next_arg) => args.push(next_arg),
-                    None => return Err("Trailing comma".to_string())
+                    None => return Err("Trailing comma".to_string()),
                 }
             }
         }
@@ -125,55 +109,52 @@ impl<T: BufRead> Parser<T> {
         Ok(TopLevelToken::SubCall(method_name, args))
     }
 
-    fn _read_argument(
-        &mut self
-    ) -> Result<Option<Expression>> {
+    fn _read_argument(&mut self) -> Result<Option<Expression>> {
         // skip whitespace after method name or after comma
-        self._skip_whitespace()?;
-        let next = self._read_lexeme()?;
+        self.buf_lexer.skip_whitespace()?;
+        let next = self.buf_lexer.read()?;
         match next {
-            Lexeme::Symbol('"') => {
-                Ok(Some(self._read_string()?))
-            },
+            Lexeme::Symbol('"') => Ok(Some(self._read_string()?)),
             Lexeme::Word(w) => {
-                self._consume_lexeme();
+                self.buf_lexer.consume();
                 Ok(Some(Expression::VariableName(w)))
-            },
+            }
             Lexeme::CRLF | Lexeme::CR | Lexeme::LF | Lexeme::EOF => Ok(None),
-            _ => Err(format!("Expected argument or end of line, found {:?}", next)),
+            _ => Err(format!(
+                "Expected argument or end of line, found {:?}",
+                next
+            )),
         }
     }
 
-    fn _read_comma_between_arguments(
-        &mut self
-    ) -> Result<bool> {
+    fn _read_comma_between_arguments(&mut self) -> Result<bool> {
         // skip whitespace after previous arg
-        self._skip_whitespace()?;
-        let next = self._read_lexeme()?;
+        self.buf_lexer.skip_whitespace()?;
+        let next = self.buf_lexer.read()?;
         match next {
             Lexeme::Symbol(',') => {
-                self._consume_lexeme();
+                self.buf_lexer.consume();
                 Ok(true)
-            },
+            }
             Lexeme::CRLF | Lexeme::CR | Lexeme::LF | Lexeme::EOF => Ok(false),
             _ => Err(format!("Expected comma or end of line, found {:?}", next)),
         }
     }
 
     fn _assert_symbol(&mut self, ch: char) -> Result<()> {
-        let l = self._read_lexeme()?;
+        let l = self.buf_lexer.read()?;
 
         // verify we read a double quote
         match l {
             Lexeme::Symbol(_ch) => {
                 if _ch == ch {
-                    self._consume_lexeme();
+                    self.buf_lexer.consume();
                     Ok(())
                 } else {
                     Err(format!("Expected {}, found {:?}", ch, l))
                 }
-            },
-            _ => Err(format!("Expected {}, found {:?}", ch, l))
+            }
+            _ => Err(format!("Expected {}, found {:?}", ch, l)),
         }
     }
 
@@ -185,14 +166,15 @@ impl<T: BufRead> Parser<T> {
 
         // read until we hit the next double quote
         loop {
-            let l = self._read_lexeme()?;
-            self._consume_lexeme();
+            let l = self.buf_lexer.read()?;
+            self.buf_lexer.consume();
             match l {
                 Lexeme::Symbol('"') => break,
                 Lexeme::EOF => return Err("EOF while looking for end of string".to_string()),
-                Lexeme::CRLF | Lexeme::CR | Lexeme::LF =>
-                    return Err("Unexpected new line while looking for end of string".to_string()),
-                _ => l.push_to(&mut buf)
+                Lexeme::CRLF | Lexeme::CR | Lexeme::LF => {
+                    return Err("Unexpected new line while looking for end of string".to_string())
+                }
+                _ => l.push_to(&mut buf),
             }
         }
 
@@ -241,8 +223,7 @@ mod tests {
 
     fn parse_file(filename: &str) -> Program {
         let file_path = format!("fixtures/{}", filename);
-        let reader =
-            BufReader::new(File::open(file_path).expect("Could not read bas file"));
+        let reader = BufReader::new(File::open(file_path).expect("Could not read bas file"));
         let mut parser = Parser::new(reader);
         parser.parse().expect("Could not parse program")
     }
@@ -315,14 +296,16 @@ mod tests {
         assert_eq!(
             program,
             Program {
-                tokens: vec![TopLevelToken::SubCall(
-                    "INPUT".to_string(),
-                    vec![Expression::VariableName("N".to_string())]
-                ),
-                TopLevelToken::SubCall(
-                    "PRINT".to_string(),
-                    vec![Expression::VariableName("N".to_string())]
-                )]
+                tokens: vec![
+                    TopLevelToken::SubCall(
+                        "INPUT".to_string(),
+                        vec![Expression::VariableName("N".to_string())]
+                    ),
+                    TopLevelToken::SubCall(
+                        "PRINT".to_string(),
+                        vec![Expression::VariableName("N".to_string())]
+                    )
+                ]
             }
         );
     }
