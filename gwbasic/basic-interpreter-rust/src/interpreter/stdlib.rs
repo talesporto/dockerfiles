@@ -1,3 +1,5 @@
+use crate::common::Result;
+
 /// The standard functions that QBasic offers
 pub trait Stdlib {
     /// Implementation of PRINT x[, y, z]
@@ -7,7 +9,7 @@ pub trait Stdlib {
     fn system(&self);
 
     /// Implementation of INPUT
-    fn input(&self, args: Vec<String>);
+    fn input(&self) -> Result<String>;
 }
 
 pub struct DefaultStdlib {}
@@ -25,7 +27,11 @@ impl Stdlib for DefaultStdlib {
         std::process::exit(0)
     }
 
-    fn input(&self, args: Vec<String>) {
-        unimplemented!();
+    fn input(&self) -> Result<String> {
+        let mut line = String::new();
+        match std::io::stdin().read_line(&mut line) {
+            Ok(_) => Ok(line),
+            Err(x) => Err(format!("Could not read line: {}", x)),
+        }
     }
 }

@@ -1,27 +1,31 @@
-use crate::parser::*;
 use crate::common::Result;
+use crate::parser::*;
 use std::io::prelude::*;
 
+mod context;
 mod stdlib;
 
-use self::stdlib::{Stdlib, DefaultStdlib};
+use self::context::Context;
+use self::stdlib::{DefaultStdlib, Stdlib};
 
 pub struct Interpreter<T, S> {
     parser: Parser<T>,
     stdlib: S,
+    context: Context,
 }
 
 impl<T: BufRead> Interpreter<T, DefaultStdlib> {
-    pub fn new(r: T) -> Interpreter<T, DefaultStdlib> {
-        Interpreter::with_stdlib(r, DefaultStdlib {})
+    pub fn new(reader: T) -> Interpreter<T, DefaultStdlib> {
+        Interpreter::with_stdlib(reader, DefaultStdlib {})
     }
 }
 
 impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
-    pub fn with_stdlib(r: T, stdlib: S) -> Interpreter<T, S> {
+    pub fn with_stdlib(reader: T, stdlib: S) -> Interpreter<T, S> {
         Interpreter {
-            parser: Parser::new(r),
+            parser: Parser::new(reader),
             stdlib,
+            context: Context::new(),
         }
     }
 
@@ -38,23 +42,47 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
 
     fn _sub_call(&mut self, name: String, args: Vec<Expression>) -> Result<()> {
         if name == "PRINT" {
-            let mut strings: Vec<String> = vec![];
-            for a in args {
-                match a {
-                    Expression::StringLiteral(s) => strings.push(format!("{}", s)),
-                    _ => (),
-                }
-            }
-            self.stdlib.print(strings);
-            Ok(())
+            self._do_print(args)
         } else if name == "INPUT" {
-            unimplemented!();
-            Ok(())
+            self._do_input(args)
         } else if name == "SYSTEM" {
             self.stdlib.system();
             Ok(())
         } else {
             Err(format!("Unknown sub {}", name))
+        }
+    }
+
+    fn _do_print(&mut self, args: Vec<Expression>) -> Result<()> {
+        let mut strings: Vec<String> = vec![];
+        for a in args {
+            strings.push(self._do_print_map_arg(a)?);
+        }
+        self.stdlib.print(strings);
+        Ok(())
+    }
+
+    fn _do_print_map_arg(&self, arg: Expression) -> Result<String> {
+        match arg {
+            Expression::StringLiteral(s) => Ok(format!("{}", s)),
+            Expression::VariableName(v) => self.context.get_variable(&v),
+            _ => Err(format!("Cannot format argument {:?}", arg)),
+        }
+    }
+
+    fn _do_input(&mut self, args: Vec<Expression>) -> Result<()> {
+        for a in args {
+            let variable_name = self._do_get_variable_name(a)?;
+            let variable_value = self.stdlib.input()?;
+            self.context.set_variable(variable_name, variable_value)?;
+        }
+        Ok(())
+    }
+
+    fn _do_get_variable_name(&self, arg: Expression) -> Result<String> {
+        match arg {
+            Expression::VariableName(n) => Ok(n),
+            _ => Err(format!("Expected variable name, found {:?}", arg)),
         }
     }
 }
@@ -69,7 +97,13 @@ mod tests {
 
     impl Stdlib for MockStdlib {
         fn print(&self, args: Vec<String>) {
+            let mut is_first = true;
             for a in args {
+                if is_first {
+                    is_first = false;
+                } else {
+                    print!(" ");
+                }
                 print!("{}", a)
             }
 
@@ -80,8 +114,8 @@ mod tests {
             println!("would have exited")
         }
 
-        fn input(&self, args: Vec<String>) {
-            unimplemented!();
+        fn input(&self) -> Result<String> {
+            Ok("foo".to_string())
         }
     }
 
