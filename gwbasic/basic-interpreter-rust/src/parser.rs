@@ -3,12 +3,19 @@ use crate::lexer::*;
 use std::io::prelude::*;
 
 mod declaration;
+mod expression;
+mod for_loop;
+mod qname;
+mod statement;
+mod sub_call;
 
+/// The optional character postfix that specifies the type of a name.
+/// Example: A$ denotes a string variable
 #[derive(Debug, PartialEq)]
 pub enum TypeQualifier {
     None,
     BangInteger,
-    DollarSignString
+    DollarSignString,
 }
 
 #[derive(Debug, PartialEq)]
@@ -21,20 +28,31 @@ pub struct NameWithTypeQualifier {
 pub enum Expression {
     StringLiteral(String),
     BinaryExpression(Box<Expression>, Box<Expression>),
-    VariableName(String),
+    VariableName(NameWithTypeQualifier),
+    IntegerLiteral(i32),
 }
+
+#[derive(Debug, PartialEq)]
+pub enum Statement {
+    SubCall(String, Vec<Expression>),
+    ForLoop(
+        NameWithTypeQualifier,
+        Expression,
+        Expression,
+        Vec<Statement>,
+    ),
+}
+
+pub type Block = Vec<Statement>;
 
 #[derive(Debug, PartialEq)]
 pub enum TopLevelToken {
     EOF,
-    SubCall(String, Vec<Expression>),
     FunctionDeclaration(NameWithTypeQualifier, Vec<NameWithTypeQualifier>),
+    Statement(Statement),
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Program {
-    pub tokens: Vec<TopLevelToken>,
-}
+pub type Program = Vec<TopLevelToken>;
 
 pub struct Parser<T> {
     buf_lexer: BufLexer<T>,
@@ -50,182 +68,90 @@ impl<T: BufRead> Parser<T> {
     pub fn parse(&mut self) -> Result<Program> {
         let mut v: Vec<TopLevelToken> = vec![];
         loop {
-            let x = self._parse_one()?;
+            let x = self._parse_top_level_token()?;
             match x {
                 TopLevelToken::EOF => break,
                 _ => v.push(x),
             };
         }
-        Ok(Program { tokens: v })
+        Ok(v)
     }
 
-    fn _parse_one(&mut self) -> Result<TopLevelToken> {
-        match self.try_parse_declaration()? {
-            Some(d) => Ok(d),
-            None => {
-                let lexeme = self.buf_lexer.read()?;
-                self.buf_lexer.consume();
-                match lexeme {
-                    Lexeme::Word(s) => self._parse_sub_call(s),
-                    Lexeme::EOF => Ok(TopLevelToken::EOF),
-                    _ => Err(format!("Unexpected lexeme {:?}", lexeme)),
-                }
-            }
-        }
-    }
-
-    fn _skip_whitespace_and_new_lines(&mut self) -> Result<()> {
-        loop {
+    fn _parse_top_level_token(&mut self) -> Result<TopLevelToken> {
+        if let Some(d) = self.try_parse_declaration()? {
+            Ok(d)
+        } else if let Some(s) = self._try_parse_statement_as_top_level_token()? {
+            Ok(s)
+        } else {
             let lexeme = self.buf_lexer.read()?;
-            match lexeme {
-                Lexeme::Whitespace(_) | Lexeme::CRLF | Lexeme::CR | Lexeme::LF => {
-                    self.buf_lexer.consume()
-                }
-                _ => break,
-            }
-        }
-        Ok(())
-    }
-
-    fn _parse_sub_call(&mut self, name: String) -> Result<TopLevelToken> {
-        let method_name = name;
-        let mut args: Vec<Expression> = vec![];
-
-        let optional_first_arg = self._read_argument()?;
-
-        if let Some(first_arg) = optional_first_arg {
-            args.push(first_arg);
-            while self._read_comma_between_arguments()? {
-                let optional_next_arg = self._read_argument()?;
-                match optional_next_arg {
-                    Some(next_arg) => args.push(next_arg),
-                    None => return Err("Trailing comma".to_string()),
-                }
-            }
-        }
-
-        self._skip_whitespace_and_new_lines()?;
-
-        Ok(TopLevelToken::SubCall(method_name, args))
-    }
-
-    fn _read_argument(&mut self) -> Result<Option<Expression>> {
-        // skip whitespace after method name or after comma
-        self.buf_lexer.skip_whitespace()?;
-        let next = self.buf_lexer.read()?;
-        match next {
-            Lexeme::Symbol('"') => Ok(Some(self._read_string()?)),
-            Lexeme::Word(w) => {
-                self.buf_lexer.consume();
-                Ok(Some(Expression::VariableName(w)))
-            }
-            Lexeme::CRLF | Lexeme::CR | Lexeme::LF | Lexeme::EOF => Ok(None),
-            _ => Err(format!(
-                "Expected argument or end of line, found {:?}",
-                next
-            )),
-        }
-    }
-
-    fn _read_comma_between_arguments(&mut self) -> Result<bool> {
-        // skip whitespace after previous arg
-        self.buf_lexer.skip_whitespace()?;
-        let next = self.buf_lexer.read()?;
-        match next {
-            Lexeme::Symbol(',') => {
-                self.buf_lexer.consume();
-                Ok(true)
-            }
-            Lexeme::CRLF | Lexeme::CR | Lexeme::LF | Lexeme::EOF => Ok(false),
-            _ => Err(format!("Expected comma or end of line, found {:?}", next)),
-        }
-    }
-
-    fn _assert_symbol(&mut self, ch: char) -> Result<()> {
-        let l = self.buf_lexer.read()?;
-
-        // verify we read a double quote
-        match l {
-            Lexeme::Symbol(_ch) => {
-                if _ch == ch {
-                    self.buf_lexer.consume();
-                    Ok(())
-                } else {
-                    Err(format!("Expected {}, found {:?}", ch, l))
-                }
-            }
-            _ => Err(format!("Expected {}, found {:?}", ch, l)),
-        }
-    }
-
-    fn _read_string(&mut self) -> Result<Expression> {
-        // verify we read a double quote
-        self._assert_symbol('"')?;
-
-        let mut buf: String = String::new();
-
-        // read until we hit the next double quote
-        loop {
-            let l = self.buf_lexer.read()?;
             self.buf_lexer.consume();
-            match l {
-                Lexeme::Symbol('"') => break,
-                Lexeme::EOF => return Err("EOF while looking for end of string".to_string()),
-                Lexeme::CRLF | Lexeme::CR | Lexeme::LF => {
-                    return Err("Unexpected new line while looking for end of string".to_string())
-                }
-                _ => l.push_to(&mut buf),
+            match lexeme {
+                Lexeme::EOF => Ok(TopLevelToken::EOF),
+                _ => Err(format!("Unexpected lexeme {:?}", lexeme)),
             }
         }
+    }
 
-        Ok(Expression::StringLiteral(buf))
+    fn _try_parse_statement_as_top_level_token(&mut self) -> Result<Option<TopLevelToken>> {
+        match self.try_parse_statement()? {
+            Some(statement) => Ok(Some(TopLevelToken::Statement(statement))),
+            None => Ok(None),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_utils {
+    use super::*;
+    use std::fs::File;
+    use std::io::{BufReader, Cursor};
+
+    pub fn sub_call_to_top_level_token(name: &str, args: Vec<Expression>) -> TopLevelToken {
+        TopLevelToken::Statement(Statement::SubCall(name.to_string(), args))
+    }
+
+    pub fn parse(input: &[u8]) -> Result<Program> {
+        let c = Cursor::new(input);
+        let reader = BufReader::new(c);
+        let mut parser = Parser::new(reader);
+        parser.parse()
+    }
+
+    pub fn parse_file(filename: &str) -> Program {
+        let file_path = format!("fixtures/{}", filename);
+        let reader = BufReader::new(File::open(file_path).expect("Could not read bas file"));
+        let mut parser = Parser::new(reader);
+        parser.parse().expect("Could not parse program")
+    }
+
+    pub fn string_literal(literal: &str) -> Expression {
+        Expression::StringLiteral(literal.to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::test_utils::*;
     use super::*;
-    use std::fs::File;
-    use std::io::{BufReader, Cursor};
 
     #[test]
     fn test_parse_sub_call_no_args() {
         let input = b"PRINT";
-        let c = Cursor::new(input);
-        let reader = BufReader::new(c);
-        let mut parser = Parser::new(reader);
-        let program = parser.parse().unwrap();
-        assert_eq!(
-            program,
-            Program {
-                tokens: vec![TopLevelToken::SubCall("PRINT".to_string(), vec![])]
-            }
-        );
+        let program = parse(input).unwrap();
+        assert_eq!(program, vec![sub_call_to_top_level_token("PRINT", vec![])]);
     }
 
     #[test]
     fn test_parse_sub_call_single_arg_string_literal() {
         let input = b"PRINT \"Hello, world!\"";
-        let c = Cursor::new(input);
-        let reader = BufReader::new(c);
-        let mut parser = Parser::new(reader);
-        let program = parser.parse().unwrap();
+        let program = parse(input).unwrap();
         assert_eq!(
             program,
-            Program {
-                tokens: vec![TopLevelToken::SubCall(
-                    "PRINT".to_string(),
-                    vec![Expression::StringLiteral("Hello, world!".to_string())]
-                )]
-            }
+            vec![sub_call_to_top_level_token(
+                "PRINT",
+                vec![string_literal("Hello, world!")]
+            )]
         );
-    }
-
-    fn parse_file(filename: &str) -> Program {
-        let file_path = format!("fixtures/{}", filename);
-        let reader = BufReader::new(File::open(file_path).expect("Could not read bas file"));
-        let mut parser = Parser::new(reader);
-        parser.parse().expect("Could not parse program")
     }
 
     #[test]
@@ -233,12 +159,10 @@ mod tests {
         let program = parse_file("HELLO1.BAS");
         assert_eq!(
             program,
-            Program {
-                tokens: vec![TopLevelToken::SubCall(
-                    "PRINT".to_string(),
-                    vec![Expression::StringLiteral("Hello, world!".to_string())]
-                )]
-            }
+            vec![sub_call_to_top_level_token(
+                "PRINT",
+                vec![string_literal("Hello, world!")]
+            )]
         );
     }
 
@@ -247,15 +171,10 @@ mod tests {
         let program = parse_file("HELLO2.BAS");
         assert_eq!(
             program,
-            Program {
-                tokens: vec![TopLevelToken::SubCall(
-                    "PRINT".to_string(),
-                    vec![
-                        Expression::StringLiteral("Hello".to_string()),
-                        Expression::StringLiteral("world!".to_string())
-                    ]
-                )]
-            }
+            vec![sub_call_to_top_level_token(
+                "PRINT",
+                vec![string_literal("Hello"), string_literal("world!"),]
+            )]
         );
     }
 
@@ -264,29 +183,10 @@ mod tests {
         let program = parse_file("HELLO_S.BAS");
         assert_eq!(
             program,
-            Program {
-                tokens: vec![
-                    TopLevelToken::SubCall(
-                        "PRINT".to_string(),
-                        vec![Expression::StringLiteral("Hello, world!".to_string())]
-                    ),
-                    TopLevelToken::SubCall("SYSTEM".to_string(), vec![])
-                ]
-            }
-        );
-    }
-
-    #[test]
-    fn test_parse_fixture_fib() {
-        let program = parse_file("FIB.BAS");
-        assert_eq!(
-            program,
-            Program {
-                tokens: vec![TopLevelToken::SubCall(
-                    "PRINT".to_string(),
-                    vec![Expression::StringLiteral("Hello, world!".to_string())]
-                )]
-            }
+            vec![
+                sub_call_to_top_level_token("PRINT", vec![string_literal("Hello, world!"),]),
+                sub_call_to_top_level_token("SYSTEM", vec![])
+            ]
         );
     }
 
@@ -295,18 +195,28 @@ mod tests {
         let program = parse_file("INPUT.BAS");
         assert_eq!(
             program,
-            Program {
-                tokens: vec![
-                    TopLevelToken::SubCall(
-                        "INPUT".to_string(),
-                        vec![Expression::VariableName("N".to_string())]
-                    ),
-                    TopLevelToken::SubCall(
-                        "PRINT".to_string(),
-                        vec![Expression::VariableName("N".to_string())]
-                    )
-                ]
-            }
+            vec![
+                sub_call_to_top_level_token(
+                    "INPUT",
+                    vec![Expression::VariableName(NameWithTypeQualifier {
+                        name: "N".to_string(),
+                        type_qualifier: TypeQualifier::None
+                    })]
+                ),
+                sub_call_to_top_level_token(
+                    "PRINT",
+                    vec![Expression::VariableName(NameWithTypeQualifier {
+                        name: "N".to_string(),
+                        type_qualifier: TypeQualifier::None
+                    })]
+                )
+            ]
         );
+    }
+
+    #[test]
+    fn test_parse_fixture_fib() {
+        let program = parse_file("FIB.BAS");
+        assert_eq!(program, vec![]);
     }
 }

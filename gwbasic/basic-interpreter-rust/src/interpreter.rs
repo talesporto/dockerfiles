@@ -30,14 +30,27 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
     }
 
     pub fn interpret(&mut self) -> Result<()> {
-        let p = self.parser.parse()?;
-        for t in p.tokens {
-            match t {
-                TopLevelToken::SubCall(name, args) => self._sub_call(name, args)?,
-                _ => (),
+        let program = self.parser.parse()?;
+        for top_level_token in program {
+            if let Err(err) = self._top_level_token(top_level_token) {
+                return Err(err);
             }
         }
         Ok(())
+    }
+
+    fn _top_level_token(&mut self, top_level_token: TopLevelToken) -> Result<()> {
+        match top_level_token {
+            TopLevelToken::Statement(statement) => self._statement(statement),
+            _ => Err(format!("Unexpected top level token: {:?}", top_level_token))
+        }
+    }
+
+    fn _statement(&mut self, statement: Statement) -> Result<()> {
+        match statement {
+            Statement::SubCall(name, args) => self._sub_call(name, args),
+            _ => Err(format!("Unexpected statement: {:?}", statement))
+        }
     }
 
     fn _sub_call(&mut self, name: String, args: Vec<Expression>) -> Result<()> {
@@ -65,7 +78,7 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
     fn _do_print_map_arg(&self, arg: Expression) -> Result<String> {
         match arg {
             Expression::StringLiteral(s) => Ok(format!("{}", s)),
-            Expression::VariableName(v) => self.context.get_variable(&v),
+            Expression::VariableName(v) => self.context.get_variable(&v.name),
             _ => Err(format!("Cannot format argument {:?}", arg)),
         }
     }
@@ -81,7 +94,7 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
 
     fn _do_get_variable_name(&self, arg: Expression) -> Result<String> {
         match arg {
-            Expression::VariableName(n) => Ok(n),
+            Expression::VariableName(n) => Ok(n.name),
             _ => Err(format!("Expected variable name, found {:?}", arg)),
         }
     }
@@ -154,6 +167,12 @@ mod tests {
     fn test_interpreter_fixture_hello_s() {
         let stdlib = MockStdlib {};
         test_file("HELLO_S.BAS", stdlib);
+    }
+
+    #[test]
+    fn test_interpreter_for_print_10() {
+        let stdlib = MockStdlib {};
+        test_file("FOR_PRINT_10.BAS", stdlib);
     }
 
     #[test]

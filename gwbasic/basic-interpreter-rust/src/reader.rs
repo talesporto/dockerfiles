@@ -34,7 +34,6 @@ impl RowCol {
     }
 }
 
-#[derive(Debug)]
 pub struct CharOrEofReader<T> {
     reader: T,
     _buffer: Vec<CharOrEof>,

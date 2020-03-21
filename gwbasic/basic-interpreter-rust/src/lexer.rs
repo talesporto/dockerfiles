@@ -9,14 +9,8 @@ pub enum Lexeme {
     /// EOF
     EOF,
 
-    /// CRLF
-    CRLF,
-
-    /// CR, not followed by LF
-    CR,
-
-    /// LF, not preceded by CR
-    LF,
+    /// CR, LF
+    EOL(String),
 
     /// A sequence of letters (A-Z or a-z)
     Word(String),
@@ -28,7 +22,7 @@ pub enum Lexeme {
     Symbol(char),
 
     /// An integer number
-    Number(u32),
+    Digits(u32),
 }
 
 impl Lexeme {
@@ -51,12 +45,16 @@ fn _is_letter(ch: char) -> bool {
     (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
 }
 
-fn _is_number(ch: char) -> bool {
+fn _is_digit(ch: char) -> bool {
     ch >= '0' && ch <= '9'
 }
 
 fn _is_whitespace(ch: char) -> bool {
     ch == ' ' || ch == '\t'
+}
+
+fn _is_eol(ch: char) -> bool {
+    ch == '\r' || ch == '\n'
 }
 
 fn _is_symbol(ch: char) -> bool {
@@ -93,12 +91,14 @@ impl<T: BufRead> Lexer<T> {
                     Ok(Lexeme::Word(self._read_while(ch, _is_letter)?))
                 } else if _is_whitespace(ch) {
                     Ok(Lexeme::Whitespace(self._read_while(ch, _is_whitespace)?))
+                } else if _is_digit(ch) {
+                    Ok(Lexeme::Digits(
+                        (self._read_while(ch, _is_digit)?).parse::<u32>().unwrap(),
+                    ))
+                } else if _is_eol(ch) {
+                    Ok(Lexeme::EOL(self._read_while(ch, _is_eol)?))
                 } else if _is_symbol(ch) {
                     Ok(Lexeme::Symbol(ch))
-                } else if ch == '\n' {
-                    Ok(Lexeme::LF)
-                } else if ch == '\r' {
-                    self._read_cr_lf()
                 } else {
                     Err(format!("[lexer] Unexpected character {}", ch))
                 }
@@ -133,21 +133,11 @@ impl<T: BufRead> Lexer<T> {
 
         Ok(result)
     }
-
-    fn _read_cr_lf(&mut self) -> LexerResult {
-        let next = self.reader.read()?;
-        if let CharOrEof::Char('\n') = next {
-            self.reader.consume()?;
-            Ok(Lexeme::CRLF)
-        } else {
-            Ok(Lexeme::CR)
-        }
-    }
 }
 
 pub struct BufLexer<T> {
     lexer: Lexer<T>,
-    _last_read_lexeme: Option<Lexeme>
+    _last_read_lexeme: Option<Lexeme>,
 }
 
 impl<T: BufRead> BufLexer<T> {
@@ -177,7 +167,7 @@ impl<T: BufRead> BufLexer<T> {
         self._last_read_lexeme = match self._last_read_lexeme {
             None => panic!("No previously read lexeme!"),
             Some(_) => None,
-        }
+        };
     }
 
     /// Tries to read the given word. If the next lexeme is this particular word,
@@ -192,8 +182,8 @@ impl<T: BufRead> BufLexer<T> {
                 } else {
                     Ok(false)
                 }
-            },
-            _ => Ok(false)
+            }
+            _ => Ok(false),
         }
     }
 
@@ -207,19 +197,28 @@ impl<T: BufRead> BufLexer<T> {
                 } else {
                     Ok(false)
                 }
-            },
-            _ => Ok(false)
+            }
+            _ => Ok(false),
         }
     }
 
-    pub fn demand_word(&mut self) -> Result<String> {
+    pub fn demand_any_word(&mut self) -> Result<String> {
         let lexeme = self.read()?;
         match lexeme {
             Lexeme::Word(w) => {
                 self.consume();
                 Ok(w)
-            },
-            _ => Err(format!("Expected word, found {:?}", lexeme))
+            }
+            _ => Err(format!("Expected word, found {:?}", lexeme)),
+        }
+    }
+
+    pub fn demand_specific_word(&mut self, expected: &str) -> Result<()> {
+        let word = self.demand_any_word()?;
+        if word != expected {
+            Err(format!("Expected {}, found {}", expected, word))
+        } else {
+            Ok(())
         }
     }
 
@@ -233,19 +232,41 @@ impl<T: BufRead> BufLexer<T> {
                 } else {
                     Err(format!("Expected symbol {}, found {}", ch, s))
                 }
-            },
-            _ => Err(format!("Expected symbol {}, found {:?}", ch, lexeme))
+            }
+            _ => Err(format!("Expected symbol {}, found {:?}", ch, lexeme)),
+        }
+    }
+
+    pub fn demand_eol(&mut self) -> Result<()> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::EOL(_) => {
+                self.consume();
+                Ok(())
+            }
+            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme)),
         }
     }
 
     pub fn demand_eol_or_eof(&mut self) -> Result<()> {
         let lexeme = self.read()?;
         match lexeme {
-            Lexeme::CR | Lexeme::CRLF | Lexeme::LF | Lexeme::EOF => {
+            Lexeme::EOL(_) | Lexeme::EOF => {
                 self.consume();
                 Ok(())
-            },
-            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme))
+            }
+            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme)),
+        }
+    }
+
+    pub fn demand_whitespace(&mut self) -> Result<()> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Whitespace(_) => {
+                self.consume();
+                Ok(())
+            }
+            _ => Err(format!("Expected whitespace, found {:?}", lexeme)),
         }
     }
 
@@ -254,6 +275,17 @@ impl<T: BufRead> BufLexer<T> {
             let lexeme = self.read()?;
             match lexeme {
                 Lexeme::Whitespace(_) => self.consume(),
+                _ => break,
+            }
+        }
+        Ok(())
+    }
+
+    pub fn skip_whitespace_and_eol(&mut self) -> Result<()> {
+        loop {
+            let lexeme = self.read()?;
+            match lexeme {
+                Lexeme::Whitespace(_) | Lexeme::EOL(_) => self.consume(),
                 _ => break,
             }
         }
@@ -295,9 +327,7 @@ mod tests {
         let input = b"Hi\r\n\n\r";
         let mut lexer = Lexer::from_bytes(input);
         assert_eq!(lexer.read().unwrap(), Lexeme::Word("Hi".to_string()));
-        assert_eq!(lexer.read().unwrap(), Lexeme::CRLF);
-        assert_eq!(lexer.read().unwrap(), Lexeme::LF);
-        assert_eq!(lexer.read().unwrap(), Lexeme::CR);
+        assert_eq!(lexer.read().unwrap(), Lexeme::EOL("\r\n\n\r".to_string()));
         assert_eq!(lexer.read().unwrap(), Lexeme::EOF);
     }
 }
