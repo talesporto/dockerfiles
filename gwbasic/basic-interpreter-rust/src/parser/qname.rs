@@ -42,17 +42,20 @@ impl NameWithTypeQualifier {
 impl<T: BufRead> Parser<T> {
     pub fn demand_name_with_type_qualifier(&mut self) -> Result<NameWithTypeQualifier> {
         let name = self.buf_lexer.demand_any_word()?;
-        let type_qualifier = self._parse_type_qualifier()?;
+        let type_qualifier = self.parse_type_qualifier()?;
         Ok(NameWithTypeQualifier::new(name, type_qualifier))
     }
 
-    fn _parse_type_qualifier(&mut self) -> Result<TypeQualifier> {
+    pub fn parse_type_qualifier(&mut self) -> Result<TypeQualifier> {
         let next = self.buf_lexer.read()?;
         match next {
             Lexeme::Symbol(ch) => {
                 if ch == '!' {
                     self.buf_lexer.consume();
                     Ok(TypeQualifier::BangInteger)
+                } else if ch == '$' {
+                    self.buf_lexer.consume();
+                    Ok(TypeQualifier::DollarSignString)
                 } else {
                     Ok(TypeQualifier::None)
                 }

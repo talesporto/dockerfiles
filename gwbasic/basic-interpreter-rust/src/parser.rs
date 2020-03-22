@@ -5,6 +5,8 @@ use std::io::prelude::*;
 mod declaration;
 mod expression;
 mod for_loop;
+mod function_implementation;
+mod if_block;
 mod qname;
 mod statement;
 mod sub_call;
@@ -20,6 +22,7 @@ pub enum TopLevelToken {
     EOF,
     FunctionDeclaration(NameWithTypeQualifier, Vec<NameWithTypeQualifier>),
     Statement(Statement),
+    FunctionImplementation(NameWithTypeQualifier, Vec<NameWithTypeQualifier>, Block),
 }
 
 impl TopLevelToken {
@@ -56,14 +59,18 @@ impl<T: BufRead> Parser<T> {
     fn _parse_top_level_token(&mut self) -> Result<TopLevelToken> {
         if let Some(d) = self.try_parse_declaration()? {
             Ok(d)
+        } else if let Some(f) = self.try_parse_function_implementation()? {
+            Ok(f)
         } else if let Some(s) = self._try_parse_statement_as_top_level_token()? {
             Ok(s)
         } else {
             let lexeme = self.buf_lexer.read()?;
-            self.buf_lexer.consume();
             match lexeme {
-                Lexeme::EOF => Ok(TopLevelToken::EOF),
-                _ => Err(format!("Unexpected lexeme {:?}", lexeme)),
+                Lexeme::EOF => {
+                    self.buf_lexer.consume();
+                    Ok(TopLevelToken::EOF)
+                }
+                _ => self.buf_lexer.err("[parser] Unexpected lexeme"),
             }
         }
     }
@@ -82,17 +89,34 @@ mod test_utils {
     use std::fs::File;
     use std::io::{BufReader, Cursor};
 
-    pub fn parse(input: &[u8]) -> Result<Program> {
-        let c = Cursor::new(input);
-        let reader = BufReader::new(c);
-        let mut parser = Parser::new(reader);
+    // bytes || &str -> Parser
+    impl<T> From<T> for Parser<std::io::BufReader<std::io::Cursor<T>>>
+    where
+        T: std::convert::AsRef<[u8]>,
+    {
+        fn from(input: T) -> Self {
+            Parser::new(BufReader::new(Cursor::new(input)))
+        }
+    }
+
+    // File -> Parser
+    impl From<File> for Parser<std::io::BufReader<File>> {
+        fn from(input: File) -> Self {
+            Parser::new(BufReader::new(input))
+        }
+    }
+
+    pub fn parse<T>(input: T) -> Result<Program>
+    where
+        T: std::convert::AsRef<[u8]>,
+    {
+        let mut parser = Parser::from(input);
         parser.parse()
     }
 
     pub fn parse_file(filename: &str) -> Program {
         let file_path = format!("fixtures/{}", filename);
-        let reader = BufReader::new(File::open(file_path).expect("Could not read bas file"));
-        let mut parser = Parser::new(reader);
+        let mut parser = Parser::from(File::open(file_path).expect("Could not read bas file"));
         parser.parse().expect("Could not parse program")
     }
 }
@@ -104,14 +128,14 @@ mod tests {
 
     #[test]
     fn test_parse_sub_call_no_args() {
-        let input = b"PRINT";
+        let input = "PRINT";
         let program = parse(input).unwrap();
         assert_eq!(program, vec![TopLevelToken::sub_call("PRINT", vec![])]);
     }
 
     #[test]
     fn test_parse_sub_call_single_arg_string_literal() {
-        let input = b"PRINT \"Hello, world!\"";
+        let input = "PRINT \"Hello, world!\"";
         let program = parse(input).unwrap();
         assert_eq!(
             program,
@@ -177,7 +201,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_parse_fixture_fib() {
         let program = parse_file("FIB.BAS");
         assert_eq!(program, vec![]);

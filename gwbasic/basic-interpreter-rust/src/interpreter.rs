@@ -84,7 +84,7 @@ mod tests {
 
     #[test]
     fn test_interpret_print_hello_world() {
-        let input = b"PRINT \"Hello, world!\"";
+        let input = "PRINT \"Hello, world!\"";
         let c = Cursor::new(input);
         let reader = BufReader::new(c);
         let stdlib = MockStdlib {};

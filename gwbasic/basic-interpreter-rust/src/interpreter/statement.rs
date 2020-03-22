@@ -9,6 +9,7 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
         match statement {
             Statement::SubCall(name, args) => self.sub_call(name, args),
             Statement::ForLoop(i, a, b, statements) => self.for_loop(i, a, b, statements),
+            Statement::IfBlock(_) => unimplemented!(),
         }
     }
 

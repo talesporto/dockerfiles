@@ -100,7 +100,7 @@ impl<T: BufRead> Lexer<T> {
                 } else if _is_symbol(ch) {
                     Ok(Lexeme::Symbol(ch))
                 } else {
-                    Err(format!("[lexer] Unexpected character {}", ch))
+                    self.err(format!("Unexpected character {}", ch))
                 }
             }
         }
@@ -108,6 +108,15 @@ impl<T: BufRead> Lexer<T> {
 
     pub fn last_pos(&self) -> RowCol {
         self._last_pos
+    }
+
+    pub fn err<TResult, S: AsRef<str>>(&self, msg: S) -> Result<TResult> {
+        Err(format!(
+            "[lexer] Line {} Column {}: {}",
+            self._last_pos.row(),
+            self._last_pos.col(),
+            msg.as_ref()
+        ))
     }
 
     fn _read_while(&mut self, initial: char, predicate: fn(char) -> bool) -> Result<String> {
@@ -209,14 +218,14 @@ impl<T: BufRead> BufLexer<T> {
                 self.consume();
                 Ok(w)
             }
-            _ => Err(format!("Expected word, found {:?}", lexeme)),
+            _ => self.err("Expected word"),
         }
     }
 
     pub fn demand_specific_word(&mut self, expected: &str) -> Result<()> {
         let word = self.demand_any_word()?;
         if word != expected {
-            Err(format!("Expected {}, found {}", expected, word))
+            self.err(format!("Expected {}", expected))
         } else {
             Ok(())
         }
@@ -228,13 +237,13 @@ impl<T: BufRead> BufLexer<T> {
             Lexeme::Symbol(s) => {
                 if s == ch {
                     self.consume();
-                    Ok(())
-                } else {
-                    Err(format!("Expected symbol {}, found {}", ch, s))
+                    return Ok(());
                 }
             }
-            _ => Err(format!("Expected symbol {}, found {:?}", ch, lexeme)),
+            _ => (),
         }
+
+        self.err(format!("Expected symbol {}", ch))
     }
 
     pub fn demand_eol(&mut self) -> Result<()> {
@@ -244,7 +253,7 @@ impl<T: BufRead> BufLexer<T> {
                 self.consume();
                 Ok(())
             }
-            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme)),
+            _ => self.err("Expected EOL"),
         }
     }
 
@@ -255,7 +264,7 @@ impl<T: BufRead> BufLexer<T> {
                 self.consume();
                 Ok(())
             }
-            _ => Err(format!("Expected EOL or EOF, found {:?}", lexeme)),
+            _ => self.err("Expected EOL or EOF"),
         }
     }
 
@@ -266,19 +275,26 @@ impl<T: BufRead> BufLexer<T> {
                 self.consume();
                 Ok(())
             }
-            _ => Err(format!("Expected whitespace, found {:?}", lexeme)),
+            _ => self.err("Expected whitespace"),
         }
     }
 
-    pub fn skip_whitespace(&mut self) -> Result<()> {
+    /// Reads and consumes while the next lexeme is Whitespace.
+    ///
+    /// Returns true if at least one Whitespace was found, false otherwise.
+    pub fn skip_whitespace(&mut self) -> Result<bool> {
+        let mut found = false;
         loop {
             let lexeme = self.read()?;
             match lexeme {
-                Lexeme::Whitespace(_) => self.consume(),
+                Lexeme::Whitespace(_) => {
+                    found = true;
+                    self.consume();
+                }
                 _ => break,
             }
         }
-        Ok(())
+        Ok(found)
     }
 
     pub fn skip_whitespace_and_eol(&mut self) -> Result<()> {
@@ -291,6 +307,11 @@ impl<T: BufRead> BufLexer<T> {
         }
         Ok(())
     }
+
+    pub fn err<TResult, S: AsRef<str>>(&self, msg: S) -> Result<TResult> {
+        self.lexer
+            .err(format!("{} {:?}", msg.as_ref(), self._last_read_lexeme))
+    }
 }
 
 #[cfg(test)]
@@ -298,9 +319,12 @@ mod tests {
     use super::*;
     use std::io::{BufReader, Cursor};
 
-    impl Lexer<BufReader<Cursor<&[u8]>>> {
-        pub fn from_bytes(bytes: &[u8]) -> Lexer<BufReader<Cursor<&[u8]>>> {
-            let c = Cursor::new(bytes);
+    impl<T> From<T> for Lexer<BufReader<Cursor<T>>>
+    where
+        T: std::convert::AsRef<[u8]>,
+    {
+        fn from(input: T) -> Lexer<BufReader<Cursor<T>>> {
+            let c = Cursor::new(input);
             let reader = BufReader::new(c);
             Lexer::new(reader)
         }
@@ -308,8 +332,8 @@ mod tests {
 
     #[test]
     fn test_lexer() {
-        let input = b"PRINT \"Hello, world!\"";
-        let mut lexer = Lexer::from_bytes(input);
+        let input = "PRINT \"Hello, world!\"";
+        let mut lexer = Lexer::from(input);
         assert_eq!(lexer.read().unwrap(), Lexeme::Word("PRINT".to_string()));
         assert_eq!(lexer.read().unwrap(), Lexeme::Whitespace(" ".to_string()));
         assert_eq!(lexer.read().unwrap(), Lexeme::Symbol('"'));
@@ -324,8 +348,8 @@ mod tests {
 
     #[test]
     fn test_cr_lf() {
-        let input = b"Hi\r\n\n\r";
-        let mut lexer = Lexer::from_bytes(input);
+        let input = "Hi\r\n\n\r";
+        let mut lexer = Lexer::from(input);
         assert_eq!(lexer.read().unwrap(), Lexeme::Word("Hi".to_string()));
         assert_eq!(lexer.read().unwrap(), Lexeme::EOL("\r\n\n\r".to_string()));
         assert_eq!(lexer.read().unwrap(), Lexeme::EOF);

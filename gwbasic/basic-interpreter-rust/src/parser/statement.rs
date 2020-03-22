@@ -3,14 +3,41 @@ use crate::common::Result;
 use std::io::BufRead;
 
 #[derive(Debug, PartialEq)]
+pub struct ConditionalBlock {
+    condition: Expression,
+    block: Block,
+}
+
+impl ConditionalBlock {
+    pub fn new(condition: Expression, block: Block) -> ConditionalBlock {
+        ConditionalBlock {
+            condition,
+            block
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct IfBlock {
+    ifBlock: ConditionalBlock,
+    elseIfBlocks: Vec<ConditionalBlock>,
+    elseBlock: Option<Block>
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     SubCall(String, Vec<Expression>),
     ForLoop(
+        /// The counter of the loop
         NameWithTypeQualifier,
+        /// The lower bound
         Expression,
+        /// The upper bound
         Expression,
+        /// The statements to execute
         Block,
     ),
+    IfBlock(IfBlock),
 }
 
 impl Statement {
@@ -36,5 +63,17 @@ impl<T: BufRead> Parser<T> {
         } else {
             Ok(None)
         }
+    }
+
+    pub fn parse_block(&mut self) -> Result<Block> {
+        let mut statements: Block = vec![];
+        loop {
+            self.buf_lexer.skip_whitespace_and_eol()?;
+            match self.try_parse_statement()? {
+                Some(s) => statements.push(s),
+                None => break
+            }
+        }
+        Ok(statements)
     }
 }

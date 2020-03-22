@@ -20,23 +20,8 @@ impl<T: BufRead> Parser<T> {
         if next_word == "FUNCTION" {
             self.buf_lexer.demand_whitespace()?;
             let function_name = self.demand_name_with_type_qualifier()?;
-            let mut function_arguments: Vec<NameWithTypeQualifier> = vec![];
             self.buf_lexer.skip_whitespace()?;
-            if self.buf_lexer.try_consume_symbol('(')? {
-                self.buf_lexer.skip_whitespace()?;
-                let mut is_first_parameter = true;
-                while !self.buf_lexer.try_consume_symbol(')')? {
-                    if is_first_parameter {
-                        is_first_parameter = false;
-                    } else {
-                        self.buf_lexer.demand_symbol(',')?;
-                        self.buf_lexer.skip_whitespace()?;
-                    }
-                    function_arguments.push(self.demand_name_with_type_qualifier()?);
-                    self.buf_lexer.skip_whitespace()?;
-                }
-            }
-
+            let function_arguments: Vec<NameWithTypeQualifier> = self.parse_declaration_parameters()?;
             self.buf_lexer.demand_eol_or_eof()?;
             Ok(TopLevelToken::FunctionDeclaration(
                 function_name,
@@ -45,6 +30,25 @@ impl<T: BufRead> Parser<T> {
         } else {
             Err(format!("Unknown declaration: {}", next_word))
         }
+    }
+
+    pub fn parse_declaration_parameters(&mut self) -> Result<Vec<NameWithTypeQualifier>> {
+        let mut function_arguments: Vec<NameWithTypeQualifier> = vec![];
+        if self.buf_lexer.try_consume_symbol('(')? {
+            self.buf_lexer.skip_whitespace()?;
+            let mut is_first_parameter = true;
+            while !self.buf_lexer.try_consume_symbol(')')? {
+                if is_first_parameter {
+                    is_first_parameter = false;
+                } else {
+                    self.buf_lexer.demand_symbol(',')?;
+                    self.buf_lexer.skip_whitespace()?;
+                }
+                function_arguments.push(self.demand_name_with_type_qualifier()?);
+                self.buf_lexer.skip_whitespace()?;
+            }
+        }
+        Ok(function_arguments)
     }
 }
 
@@ -55,7 +59,7 @@ mod tests {
 
     #[test]
     fn test_fn() {
-        let input = b"DECLARE FUNCTION Fib! (N!)";
+        let input = "DECLARE FUNCTION Fib! (N!)";
         let program = parse(input).unwrap();
         assert_eq!(
             program,

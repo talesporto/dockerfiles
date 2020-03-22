@@ -30,7 +30,7 @@ impl RowCol {
     }
     pub fn inc_row(&mut self) {
         self.row += 1;
-        self.col = 0;
+        self.col = 1;
     }
 }
 

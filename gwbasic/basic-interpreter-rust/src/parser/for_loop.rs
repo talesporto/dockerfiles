@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn test_for_loop() {
-        let input = b"FOR I = 1 TO 10\r\nPRINT I\r\nNEXT";
+        let input = "FOR I = 1 TO 10\r\nPRINT I\r\nNEXT";
         let result = parse(input).unwrap();
         assert_eq!(
             result,
