@@ -71,6 +71,8 @@ fn _is_symbol(ch: char) -> bool {
         || ch == '('
         || ch == ')'
         || ch == '='
+        || ch == '<'
+        || ch == '>'
 }
 
 impl<T: BufRead> Lexer<T> {
@@ -146,14 +148,18 @@ impl<T: BufRead> Lexer<T> {
 
 pub struct BufLexer<T> {
     lexer: Lexer<T>,
-    _last_read_lexeme: Option<Lexeme>,
+    _history: Vec<Lexeme>,
+    _index: usize,
+    _mark_index: usize,
 }
 
 impl<T: BufRead> BufLexer<T> {
     pub fn new(reader: T) -> BufLexer<T> {
         BufLexer {
             lexer: Lexer::new(reader),
-            _last_read_lexeme: None,
+            _history: vec![],
+            _index: 0,
+            _mark_index: 0,
         }
     }
 
@@ -161,22 +167,38 @@ impl<T: BufRead> BufLexer<T> {
     /// The lexeme is stored and no further reads will be done unless
     /// consume is called.
     pub fn read(&mut self) -> LexerResult {
-        match self._last_read_lexeme.clone() {
-            Some(x) => Ok(x),
-            None => {
-                let new_lexeme = self.lexer.read()?;
-                self._last_read_lexeme = Some(new_lexeme.clone());
-                Ok(new_lexeme)
-            }
+        if self.needs_to_read() {
+            let new_lexeme = self.lexer.read()?;
+            self._history.push(new_lexeme);
         }
+        Ok(self._history[self._index].clone())
+    }
+
+    fn needs_to_read(&self) -> bool {
+        self._index >= self._history.len()
     }
 
     /// Consumes the previously read lexeme, allowing further reads.
     pub fn consume(&mut self) {
-        self._last_read_lexeme = match self._last_read_lexeme {
-            None => panic!("No previously read lexeme!"),
-            Some(_) => None,
-        };
+        if self._history.is_empty() {
+            panic!("No previously read lexeme!");
+        } else {
+            self._index += 1;
+        }
+    }
+
+    pub fn mark(&mut self) {
+        self._mark_index = self._index;
+    }
+
+    pub fn backtrack(&mut self) {
+        self._index = self._mark_index;
+    }
+
+    pub fn clear(&mut self) {
+        self._history.clear();
+        self._index = 0;
+        self._mark_index = 0;
     }
 
     /// Tries to read the given word. If the next lexeme is this particular word,
@@ -225,7 +247,7 @@ impl<T: BufRead> BufLexer<T> {
     pub fn demand_specific_word(&mut self, expected: &str) -> Result<()> {
         let word = self.demand_any_word()?;
         if word != expected {
-            self.err(format!("Expected {}", expected))
+            self.err(format!("Expected {}, found {}", expected, word))
         } else {
             Ok(())
         }
@@ -309,8 +331,15 @@ impl<T: BufRead> BufLexer<T> {
     }
 
     pub fn err<TResult, S: AsRef<str>>(&self, msg: S) -> Result<TResult> {
-        self.lexer
-            .err(format!("{} {:?}", msg.as_ref(), self._last_read_lexeme))
+        if self.needs_to_read() {
+            self.lexer.err(msg)
+        } else {
+            self.lexer.err(format!(
+                "{} {:?}",
+                msg.as_ref(),
+                self._history[self._index].clone()
+            ))
+        }
     }
 }
 

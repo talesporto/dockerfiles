@@ -4,13 +4,21 @@ use crate::lexer::Lexeme;
 use std::convert::TryFrom;
 use std::io::BufRead;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Operand {
+    LessOrEqualThan,
+    LessThan,
+    Plus,
+    Minus,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     StringLiteral(String),
-    // BinaryExpression(Box<Expression>, Box<Expression>),
     VariableName(NameWithTypeQualifier),
     IntegerLiteral(i32),
     FunctionCall(String, Vec<Expression>),
+    BinaryExpression(Operand, Box<Expression>, Box<Expression>),
 }
 
 impl Expression {
@@ -59,6 +67,14 @@ impl<T: BufRead> Parser<T> {
     }
 
     pub fn try_parse_expression(&mut self) -> Result<Option<Expression>> {
+        let left_side = self._try_parse_single_expression()?;
+        match left_side {
+            None => Ok(None),
+            Some(exp) => Ok(Some(self._try_parse_second_expression(exp)?)),
+        }
+    }
+
+    fn _try_parse_single_expression(&mut self) -> Result<Option<Expression>> {
         let next = self.buf_lexer.read()?;
         match next {
             Lexeme::Symbol('"') => Ok(Some(self._parse_string_literal()?)),
@@ -68,6 +84,23 @@ impl<T: BufRead> Parser<T> {
         }
     }
 
+    fn _try_parse_second_expression(&mut self, left_side: Expression) -> Result<Expression> {
+        let operand = self._try_parse_operand()?;
+        match operand {
+            Some(op) => {
+                self.buf_lexer.skip_whitespace()?;
+                let right_side = self.demand_expression()?;
+                Ok(Expression::BinaryExpression(
+                    op,
+                    Box::new(left_side),
+                    Box::new(right_side),
+                ))
+            }
+            None => Ok(left_side),
+        }
+    }
+
+    /// Parses a comma separated list of expressions.
     pub fn parse_expression_list(&mut self) -> Result<Vec<Expression>> {
         let mut args: Vec<Expression> = vec![];
         let optional_first_arg = self.try_parse_expression()?;
@@ -131,6 +164,29 @@ impl<T: BufRead> Parser<T> {
             Ok(Expression::FunctionCall(word, args))
         } else {
             Ok(Expression::variable_name_qualified(word, qualifier))
+        }
+    }
+
+    fn _try_parse_operand(&mut self) -> Result<Option<Operand>> {
+        self.buf_lexer.mark();
+        self.buf_lexer.skip_whitespace()?;
+        if self.buf_lexer.try_consume_symbol('<')? {
+            self._less_or_lte()
+        } else if self.buf_lexer.try_consume_symbol('+')? {
+            Ok(Some(Operand::Plus))
+        } else if self.buf_lexer.try_consume_symbol('-')? {
+            Ok(Some(Operand::Minus))
+        } else {
+            self.buf_lexer.backtrack();
+            Ok(None)
+        }
+    }
+
+    fn _less_or_lte(&mut self) -> Result<Option<Operand>> {
+        if self.buf_lexer.try_consume_symbol('=')? {
+            Ok(Some(Operand::LessOrEqualThan))
+        } else {
+            Ok(Some(Operand::LessThan))
         }
     }
 }
@@ -218,6 +274,95 @@ mod tests {
                     ),
                     Expression::FunctionCall("Confirm".to_string(), vec![])
                 ]
+            )
+        );
+    }
+
+    #[test]
+    fn test_lte() {
+        let input = "N <= 1";
+        let mut parser = Parser::from(input);
+        let expression = parser.demand_expression().unwrap();
+        assert_eq!(
+            expression,
+            Expression::BinaryExpression(
+                Operand::LessOrEqualThan,
+                Box::new(Expression::variable_name_unqualified("N")),
+                Box::new(Expression::IntegerLiteral(1))
+            )
+        );
+    }
+
+    #[test]
+    fn test_less_than() {
+        let input = "A < B";
+        let mut parser = Parser::from(input);
+        let expression = parser.demand_expression().unwrap();
+        assert_eq!(
+            expression,
+            Expression::BinaryExpression(
+                Operand::LessThan,
+                Box::new(Expression::variable_name_unqualified("A")),
+                Box::new(Expression::variable_name_unqualified("B"))
+            )
+        );
+    }
+
+    #[test]
+    fn test_plus() {
+        let input = "N + 1";
+        let mut parser = Parser::from(input);
+        let expression = parser.demand_expression().unwrap();
+        assert_eq!(
+            expression,
+            Expression::BinaryExpression(
+                Operand::Plus,
+                Box::new(Expression::variable_name_unqualified("N")),
+                Box::new(Expression::IntegerLiteral(1))
+            )
+        );
+    }
+
+    #[test]
+    fn test_minus() {
+        let input = "N - 2";
+        let mut parser = Parser::from(input);
+        let expression = parser.demand_expression().unwrap();
+        assert_eq!(
+            expression,
+            Expression::BinaryExpression(
+                Operand::Minus,
+                Box::new(Expression::variable_name_unqualified("N")),
+                Box::new(Expression::IntegerLiteral(2))
+            )
+        );
+    }
+
+    #[test]
+    fn test_fib_expression() {
+        let input = "Fib(N - 1) + Fib(N - 2)";
+        let mut parser = Parser::from(input);
+        let expression = parser.demand_expression().unwrap();
+        assert_eq!(
+            expression,
+            Expression::BinaryExpression(
+                Operand::Plus,
+                Box::new(Expression::FunctionCall(
+                    "Fib".to_string(),
+                    vec![Expression::BinaryExpression(
+                        Operand::Minus,
+                        Box::new(Expression::variable_name_unqualified("N")),
+                        Box::new(Expression::IntegerLiteral(1))
+                    )]
+                )),
+                Box::new(Expression::FunctionCall(
+                    "Fib".to_string(),
+                    vec![Expression::BinaryExpression(
+                        Operand::Minus,
+                        Box::new(Expression::variable_name_unqualified("N")),
+                        Box::new(Expression::IntegerLiteral(2))
+                    )]
+                ))
             )
         );
     }

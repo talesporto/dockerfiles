@@ -1,28 +1,7 @@
 use super::{Block, Parser, Expression, NameWithTypeQualifier};
 use crate::common::Result;
 use std::io::BufRead;
-
-#[derive(Debug, PartialEq)]
-pub struct ConditionalBlock {
-    condition: Expression,
-    block: Block,
-}
-
-impl ConditionalBlock {
-    pub fn new(condition: Expression, block: Block) -> ConditionalBlock {
-        ConditionalBlock {
-            condition,
-            block
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct IfBlock {
-    ifBlock: ConditionalBlock,
-    elseIfBlocks: Vec<ConditionalBlock>,
-    elseBlock: Option<Block>
-}
+use super::if_block::IfBlock;
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
@@ -58,6 +37,8 @@ impl<T: BufRead> Parser<T> {
     pub fn try_parse_statement(&mut self) -> Result<Option<Statement>> {
         if let Some(f) = self.try_parse_for_loop()? {
             Ok(Some(f))
+        } else if let Some(x) = self.try_parse_if_block()? {
+            Ok(Some(x))
         } else if let Some(s) = self.try_parse_sub_call()? {
             Ok(Some(s))
         } else {
