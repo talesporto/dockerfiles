@@ -1,6 +1,5 @@
-use super::{NameWithTypeQualifier, Parser, Statement, TypeQualifier};
+use super::{Parser, Statement};
 use crate::common::Result;
-use crate::lexer::Lexeme;
 use std::io::BufRead;
 
 impl<T: BufRead> Parser<T> {
@@ -35,7 +34,7 @@ impl<T: BufRead> Parser<T> {
                 for_counter_variable,
                 lower_bound,
                 upper_bound,
-                statements
+                statements,
             )))
         } else {
             Ok(None)
@@ -46,9 +45,7 @@ impl<T: BufRead> Parser<T> {
 #[cfg(test)]
 mod tests {
     use crate::parser::test_utils::*;
-    use crate::parser::{
-        Expression, NameWithTypeQualifier, Statement, TopLevelToken, TypeQualifier,
-    };
+    use crate::parser::{Expression, NameWithTypeQualifier, Statement, TopLevelToken};
 
     #[test]
     fn test_for_loop() {
@@ -57,20 +54,86 @@ mod tests {
         assert_eq!(
             result,
             vec![TopLevelToken::Statement(Statement::ForLoop(
-                NameWithTypeQualifier {
-                    name: "I".to_string(),
-                    type_qualifier: TypeQualifier::None
-                },
-                Expression::IntegerLiteral(1),
-                Expression::IntegerLiteral(10),
-                vec![Statement::SubCall(
-                    "PRINT".to_string(),
-                    vec![Expression::VariableName(NameWithTypeQualifier {
-                        name: "I".to_string(),
-                        type_qualifier: TypeQualifier::None
-                    })]
+                NameWithTypeQualifier::new_unqualified("I"),
+                Expression::integer_literal(1),
+                Expression::integer_literal(10),
+                vec![Statement::sub_call(
+                    "PRINT",
+                    vec![Expression::variable_name_unqualified("I")]
                 )]
             ))]
+        );
+    }
+
+    #[test]
+    fn fn_fixture_for_print_10() {
+        let result = parse_file("FOR_PRINT_10.BAS");
+        assert_eq!(
+            result,
+            vec![TopLevelToken::Statement(Statement::ForLoop(
+                NameWithTypeQualifier::new_unqualified("I"),
+                Expression::integer_literal(1),
+                Expression::integer_literal(10),
+                vec![Statement::sub_call(
+                    "PRINT",
+                    vec![
+                        Expression::string_literal("Hello"),
+                        Expression::variable_name_unqualified("I")
+                    ]
+                )]
+            ))]
+        );
+    }
+
+    #[test]
+    fn fn_fixture_for_nested() {
+        let result = parse_file("FOR_NESTED.BAS");
+        assert_eq!(
+            result,
+            vec![
+                TopLevelToken::sub_call(
+                    "PRINT",
+                    vec![Expression::string_literal("Before the outer loop")]
+                ),
+                TopLevelToken::Statement(Statement::ForLoop(
+                    NameWithTypeQualifier::new_unqualified("I"),
+                    Expression::integer_literal(1),
+                    Expression::integer_literal(10),
+                    vec![
+                        Statement::sub_call(
+                            "PRINT",
+                            vec![
+                                Expression::string_literal("Before the inner loop"),
+                                Expression::variable_name_unqualified("I")
+                            ]
+                        ),
+                        Statement::ForLoop(
+                            NameWithTypeQualifier::new_unqualified("J"),
+                            Expression::integer_literal(1),
+                            Expression::integer_literal(10),
+                            vec![Statement::sub_call(
+                                "PRINT",
+                                vec![
+                                    Expression::string_literal("Inner loop"),
+                                    Expression::variable_name_unqualified("I"),
+                                    Expression::variable_name_unqualified("J"),
+                                ]
+                            ),]
+                        ),
+                        Statement::sub_call(
+                            "PRINT",
+                            vec![
+                                Expression::string_literal("After the inner loop"),
+                                Expression::variable_name_unqualified("I")
+                            ]
+                        ),
+                    ]
+                )),
+                TopLevelToken::sub_call(
+                    "PRINT",
+                    vec![Expression::string_literal("After the outer loop")]
+                ),
+            ]
         );
     }
 }

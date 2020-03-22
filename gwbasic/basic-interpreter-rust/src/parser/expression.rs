@@ -1,14 +1,59 @@
-use super::{Expression, NameWithTypeQualifier, Parser, TypeQualifier};
+use super::{NameWithTypeQualifier, Parser, TypeQualifier};
 use crate::common::Result;
 use crate::lexer::Lexeme;
 use std::convert::TryFrom;
 use std::io::BufRead;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expression {
+    StringLiteral(String),
+    BinaryExpression(Box<Expression>, Box<Expression>),
+    VariableName(NameWithTypeQualifier),
+    IntegerLiteral(i32),
+}
+
+impl Expression {
+    /// Creates a new IntegerLiteral expression
+    pub fn integer_literal(value: i32) -> Expression {
+        Expression::IntegerLiteral(value)
+    }
+
+    /// Creates a new VariableName expression with a qualified type
+    pub fn variable_name_qualified<S: AsRef<str>>(
+        name: S,
+        type_qualifier: TypeQualifier,
+    ) -> Expression {
+        Expression::VariableName(NameWithTypeQualifier::new(name, type_qualifier))
+    }
+
+    /// Creates a new VariableName expression without a qualified type
+    pub fn variable_name_unqualified<S: AsRef<str>>(name: S) -> Expression {
+        Expression::VariableName(NameWithTypeQualifier::new_unqualified(name))
+    }
+
+    /// Creates a new StringLiteral expression
+    pub fn string_literal<S: AsRef<str>>(literal: S) -> Expression {
+        Expression::StringLiteral(literal.as_ref().to_string())
+    }
+
+    /// Returns the variable name if this expression is a VariableName,
+    /// errors otherwise.
+    pub fn try_to_variable_name(&self) -> Result<String> {
+        match self {
+            Expression::VariableName(n) => Ok(n.name()),
+            _ => Err(format!("Expected variable name, was {:?}", self))
+        }
+    }
+}
+
 impl<T: BufRead> Parser<T> {
     pub fn demand_expression(&mut self) -> Result<Expression> {
         match self.try_parse_expression()? {
             Some(e) => Ok(e),
-            None => Err(format!("Expected expression, found {:?}", self.buf_lexer.read()?))
+            None => Err(format!(
+                "Expected expression, found {:?}",
+                self.buf_lexer.read()?
+            )),
         }
     }
 
@@ -18,10 +63,7 @@ impl<T: BufRead> Parser<T> {
             Lexeme::Symbol('"') => Ok(Some(self._read_string()?)),
             Lexeme::Word(w) => {
                 self.buf_lexer.consume();
-                Ok(Some(Expression::VariableName(NameWithTypeQualifier {
-                    name: w,
-                    type_qualifier: TypeQualifier::None,
-                })))
+                Ok(Some(Expression::variable_name_unqualified(w)))
             }
             Lexeme::Digits(d) => {
                 self.buf_lexer.consume();

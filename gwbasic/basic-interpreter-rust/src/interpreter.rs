@@ -1,9 +1,12 @@
 use crate::common::Result;
-use crate::parser::*;
+use crate::parser::{Parser, TopLevelToken};
 use std::io::prelude::*;
 
 mod context;
+mod for_loop;
 mod stdlib;
+mod statement;
+mod sub_call;
 
 use self::context::Context;
 use self::stdlib::{DefaultStdlib, Stdlib};
@@ -32,70 +35,17 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
     pub fn interpret(&mut self) -> Result<()> {
         let program = self.parser.parse()?;
         for top_level_token in program {
-            if let Err(err) = self._top_level_token(top_level_token) {
+            if let Err(err) = self._top_level_token(&top_level_token) {
                 return Err(err);
             }
         }
         Ok(())
     }
 
-    fn _top_level_token(&mut self, top_level_token: TopLevelToken) -> Result<()> {
+    fn _top_level_token(&mut self, top_level_token: &TopLevelToken) -> Result<()> {
         match top_level_token {
-            TopLevelToken::Statement(statement) => self._statement(statement),
-            _ => Err(format!("Unexpected top level token: {:?}", top_level_token))
-        }
-    }
-
-    fn _statement(&mut self, statement: Statement) -> Result<()> {
-        match statement {
-            Statement::SubCall(name, args) => self._sub_call(name, args),
-            _ => Err(format!("Unexpected statement: {:?}", statement))
-        }
-    }
-
-    fn _sub_call(&mut self, name: String, args: Vec<Expression>) -> Result<()> {
-        if name == "PRINT" {
-            self._do_print(args)
-        } else if name == "INPUT" {
-            self._do_input(args)
-        } else if name == "SYSTEM" {
-            self.stdlib.system();
-            Ok(())
-        } else {
-            Err(format!("Unknown sub {}", name))
-        }
-    }
-
-    fn _do_print(&mut self, args: Vec<Expression>) -> Result<()> {
-        let mut strings: Vec<String> = vec![];
-        for a in args {
-            strings.push(self._do_print_map_arg(a)?);
-        }
-        self.stdlib.print(strings);
-        Ok(())
-    }
-
-    fn _do_print_map_arg(&self, arg: Expression) -> Result<String> {
-        match arg {
-            Expression::StringLiteral(s) => Ok(format!("{}", s)),
-            Expression::VariableName(v) => self.context.get_variable(&v.name),
-            _ => Err(format!("Cannot format argument {:?}", arg)),
-        }
-    }
-
-    fn _do_input(&mut self, args: Vec<Expression>) -> Result<()> {
-        for a in args {
-            let variable_name = self._do_get_variable_name(a)?;
-            let variable_value = self.stdlib.input()?;
-            self.context.set_variable(variable_name, variable_value)?;
-        }
-        Ok(())
-    }
-
-    fn _do_get_variable_name(&self, arg: Expression) -> Result<String> {
-        match arg {
-            Expression::VariableName(n) => Ok(n.name),
-            _ => Err(format!("Expected variable name, found {:?}", arg)),
+            TopLevelToken::Statement(statement) => self.statement(statement),
+            _ => Err(format!("Unexpected top level token: {:?}", top_level_token)),
         }
     }
 }
@@ -176,6 +126,13 @@ mod tests {
     }
 
     #[test]
+    fn test_interpreter_for_nested() {
+        let stdlib = MockStdlib {};
+        test_file("FOR_NESTED.BAS", stdlib);
+    }
+
+    #[test]
+    #[ignore]
     fn test_interpreter_fixture_fib() {
         let stdlib = MockStdlib {};
         test_file("FIB.BAS", stdlib);

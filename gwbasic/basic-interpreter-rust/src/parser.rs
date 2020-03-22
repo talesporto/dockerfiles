@@ -9,39 +9,9 @@ mod qname;
 mod statement;
 mod sub_call;
 
-/// The optional character postfix that specifies the type of a name.
-/// Example: A$ denotes a string variable
-#[derive(Debug, PartialEq)]
-pub enum TypeQualifier {
-    None,
-    BangInteger,
-    DollarSignString,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct NameWithTypeQualifier {
-    pub name: String,
-    pub type_qualifier: TypeQualifier,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Expression {
-    StringLiteral(String),
-    BinaryExpression(Box<Expression>, Box<Expression>),
-    VariableName(NameWithTypeQualifier),
-    IntegerLiteral(i32),
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Statement {
-    SubCall(String, Vec<Expression>),
-    ForLoop(
-        NameWithTypeQualifier,
-        Expression,
-        Expression,
-        Vec<Statement>,
-    ),
-}
+pub use self::expression::*;
+pub use self::qname::*;
+pub use self::statement::*;
 
 pub type Block = Vec<Statement>;
 
@@ -50,6 +20,12 @@ pub enum TopLevelToken {
     EOF,
     FunctionDeclaration(NameWithTypeQualifier, Vec<NameWithTypeQualifier>),
     Statement(Statement),
+}
+
+impl TopLevelToken {
+    pub fn sub_call<S: AsRef<str>>(name: S, args: Vec<Expression>) -> TopLevelToken {
+        TopLevelToken::Statement(Statement::sub_call(name, args))
+    }
 }
 
 pub type Program = Vec<TopLevelToken>;
@@ -106,10 +82,6 @@ mod test_utils {
     use std::fs::File;
     use std::io::{BufReader, Cursor};
 
-    pub fn sub_call_to_top_level_token(name: &str, args: Vec<Expression>) -> TopLevelToken {
-        TopLevelToken::Statement(Statement::SubCall(name.to_string(), args))
-    }
-
     pub fn parse(input: &[u8]) -> Result<Program> {
         let c = Cursor::new(input);
         let reader = BufReader::new(c);
@@ -123,10 +95,6 @@ mod test_utils {
         let mut parser = Parser::new(reader);
         parser.parse().expect("Could not parse program")
     }
-
-    pub fn string_literal(literal: &str) -> Expression {
-        Expression::StringLiteral(literal.to_string())
-    }
 }
 
 #[cfg(test)]
@@ -138,7 +106,7 @@ mod tests {
     fn test_parse_sub_call_no_args() {
         let input = b"PRINT";
         let program = parse(input).unwrap();
-        assert_eq!(program, vec![sub_call_to_top_level_token("PRINT", vec![])]);
+        assert_eq!(program, vec![TopLevelToken::sub_call("PRINT", vec![])]);
     }
 
     #[test]
@@ -147,9 +115,9 @@ mod tests {
         let program = parse(input).unwrap();
         assert_eq!(
             program,
-            vec![sub_call_to_top_level_token(
+            vec![TopLevelToken::sub_call(
                 "PRINT",
-                vec![string_literal("Hello, world!")]
+                vec![Expression::string_literal("Hello, world!")]
             )]
         );
     }
@@ -159,9 +127,9 @@ mod tests {
         let program = parse_file("HELLO1.BAS");
         assert_eq!(
             program,
-            vec![sub_call_to_top_level_token(
+            vec![TopLevelToken::sub_call(
                 "PRINT",
-                vec![string_literal("Hello, world!")]
+                vec![Expression::string_literal("Hello, world!")]
             )]
         );
     }
@@ -171,9 +139,12 @@ mod tests {
         let program = parse_file("HELLO2.BAS");
         assert_eq!(
             program,
-            vec![sub_call_to_top_level_token(
+            vec![TopLevelToken::sub_call(
                 "PRINT",
-                vec![string_literal("Hello"), string_literal("world!"),]
+                vec![
+                    Expression::string_literal("Hello"),
+                    Expression::string_literal("world!"),
+                ]
             )]
         );
     }
@@ -184,8 +155,11 @@ mod tests {
         assert_eq!(
             program,
             vec![
-                sub_call_to_top_level_token("PRINT", vec![string_literal("Hello, world!"),]),
-                sub_call_to_top_level_token("SYSTEM", vec![])
+                TopLevelToken::sub_call(
+                    "PRINT",
+                    vec![Expression::string_literal("Hello, world!"),]
+                ),
+                TopLevelToken::sub_call("SYSTEM", vec![])
             ]
         );
     }
@@ -196,25 +170,14 @@ mod tests {
         assert_eq!(
             program,
             vec![
-                sub_call_to_top_level_token(
-                    "INPUT",
-                    vec![Expression::VariableName(NameWithTypeQualifier {
-                        name: "N".to_string(),
-                        type_qualifier: TypeQualifier::None
-                    })]
-                ),
-                sub_call_to_top_level_token(
-                    "PRINT",
-                    vec![Expression::VariableName(NameWithTypeQualifier {
-                        name: "N".to_string(),
-                        type_qualifier: TypeQualifier::None
-                    })]
-                )
+                TopLevelToken::sub_call("INPUT", vec![Expression::variable_name_unqualified("N")]),
+                TopLevelToken::sub_call("PRINT", vec![Expression::variable_name_unqualified("N")])
             ]
         );
     }
 
     #[test]
+    #[ignore]
     fn test_parse_fixture_fib() {
         let program = parse_file("FIB.BAS");
         assert_eq!(program, vec![]);

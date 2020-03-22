@@ -60,14 +60,8 @@ mod tests {
         assert_eq!(
             program,
             vec![TopLevelToken::FunctionDeclaration(
-                NameWithTypeQualifier {
-                    name: "Fib".to_string(),
-                    type_qualifier: TypeQualifier::BangInteger
-                },
-                vec![NameWithTypeQualifier {
-                    name: "N".to_string(),
-                    type_qualifier: TypeQualifier::BangInteger
-                }]
+                NameWithTypeQualifier::new("Fib", TypeQualifier::BangInteger),
+                vec![NameWithTypeQualifier::new("N", TypeQualifier::BangInteger)]
             )]
         );
     }
