@@ -15,6 +15,7 @@ impl<T: BufRead> Parser<T> {
             self.buf_lexer.demand_specific_word("END")?;
             self.buf_lexer.demand_whitespace()?;
             self.buf_lexer.demand_specific_word("FUNCTION")?;
+            self.buf_lexer.demand_eol_or_eof()?;
 
             Ok(Some(TopLevelToken::FunctionImplementation(
                 NameWithTypeQualifier::new_unqualified(name),

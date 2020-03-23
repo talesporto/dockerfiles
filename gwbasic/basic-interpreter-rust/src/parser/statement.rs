@@ -17,6 +17,8 @@ pub enum Statement {
         Block,
     ),
     IfBlock(IfBlock),
+    /// Assignment to a variable e.g. ANSWER = 42
+    Assignment(NameWithTypeQualifier, Expression)
 }
 
 impl Statement {
@@ -35,10 +37,12 @@ impl<T: BufRead> Parser<T> {
     }
 
     pub fn try_parse_statement(&mut self) -> Result<Option<Statement>> {
-        if let Some(f) = self.try_parse_for_loop()? {
-            Ok(Some(f))
-        } else if let Some(x) = self.try_parse_if_block()? {
-            Ok(Some(x))
+        if let Some(s) = self.try_parse_for_loop()? {
+            Ok(Some(s))
+        } else if let Some(s) = self.try_parse_if_block()? {
+            Ok(Some(s))
+        } else if let Some(s) = self.try_parse_assignment()? {
+            Ok(Some(s))
         } else if let Some(s) = self.try_parse_sub_call()? {
             Ok(Some(s))
         } else {

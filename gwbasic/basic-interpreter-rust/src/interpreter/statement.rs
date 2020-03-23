@@ -10,6 +10,7 @@ impl<T: BufRead, S: Stdlib> Interpreter<T, S> {
             Statement::SubCall(name, args) => self.sub_call(name, args),
             Statement::ForLoop(i, a, b, statements) => self.for_loop(i, a, b, statements),
             Statement::IfBlock(_) => unimplemented!(),
+            Statement::Assignment(_, _) => unimplemented!(),
         }
     }
 

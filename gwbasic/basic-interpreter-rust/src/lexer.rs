@@ -196,8 +196,10 @@ impl<T: BufRead> BufLexer<T> {
     }
 
     pub fn clear(&mut self) {
-        self._history.clear();
-        self._index = 0;
+        while self._index > 0 {
+            self._history.remove(0);
+            self._index -= 1;
+        }
         self._mark_index = 0;
     }
 
@@ -215,6 +217,17 @@ impl<T: BufRead> BufLexer<T> {
                 }
             }
             _ => Ok(false),
+        }
+    }
+
+    pub fn try_consume_any_word(&mut self) -> Result<Option<String>> {
+        let lexeme = self.read()?;
+        match lexeme {
+            Lexeme::Word(w) => {
+                self.consume();
+                Ok(Some(w))
+            },
+            _ => Ok(None)
         }
     }
 

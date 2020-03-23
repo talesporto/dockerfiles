@@ -40,6 +40,17 @@ impl NameWithTypeQualifier {
 }
 
 impl<T: BufRead> Parser<T> {
+    pub fn try_parse_name_with_type_qualifier(&mut self) -> Result<Option<NameWithTypeQualifier>> {
+        let next = self.buf_lexer.try_consume_any_word()?;
+        match next {
+            Some(w) => {
+                let type_qualifier = self.parse_type_qualifier()?;
+                Ok(Some(NameWithTypeQualifier::new(w, type_qualifier)))
+            },
+            None => Ok(None)
+        }
+    }
+
     pub fn demand_name_with_type_qualifier(&mut self) -> Result<NameWithTypeQualifier> {
         let name = self.buf_lexer.demand_any_word()?;
         let type_qualifier = self.parse_type_qualifier()?;

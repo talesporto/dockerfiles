@@ -2,6 +2,7 @@ use crate::common::Result;
 use crate::lexer::*;
 use std::io::prelude::*;
 
+mod assignment;
 mod declaration;
 mod expression;
 mod for_loop;
@@ -125,6 +126,7 @@ mod test_utils {
 mod tests {
     use super::test_utils::*;
     use super::*;
+    use crate::parser::if_block::*;
 
     #[test]
     fn test_parse_sub_call_no_args() {
@@ -203,6 +205,85 @@ mod tests {
     #[test]
     fn test_parse_fixture_fib() {
         let program = parse_file("FIB.BAS");
-        assert_eq!(program, vec![]);
+        assert_eq!(
+            program,
+            vec![
+                // DECLARE FUNCTION Fib! (N!)
+                TopLevelToken::FunctionDeclaration(
+                    NameWithTypeQualifier::new("Fib", TypeQualifier::BangInteger),
+                    vec![NameWithTypeQualifier::new("N", TypeQualifier::BangInteger)]
+                ),
+                // PRINT "Enter the number of fibonacci to calculate"
+                TopLevelToken::sub_call(
+                    "PRINT",
+                    vec![Expression::string_literal(
+                        "Enter the number of fibonacci to calculate"
+                    )]
+                ),
+                // INPUT N
+                TopLevelToken::sub_call("INPUT", vec![Expression::variable_name_unqualified("N")]),
+                // FOR I = 0 TO N
+                TopLevelToken::Statement(Statement::ForLoop(
+                    NameWithTypeQualifier::new_unqualified("I"),
+                    Expression::IntegerLiteral(0),
+                    Expression::variable_name_unqualified("N"),
+                    vec![
+                        // PRINT "Fibonacci of ", I, " is ", Fib(I)
+                        Statement::sub_call(
+                            "PRINT",
+                            vec![
+                                Expression::string_literal("Fibonacci of "),
+                                Expression::variable_name_unqualified("I"),
+                                Expression::string_literal(" is "),
+                                Expression::FunctionCall(
+                                    "Fib".to_string(),
+                                    vec![Expression::variable_name_unqualified("I")]
+                                )
+                            ]
+                        )
+                    ]
+                )),
+                // FUNCTION Fib (N)
+                TopLevelToken::FunctionImplementation(
+                    NameWithTypeQualifier::new_unqualified("Fib"),
+                    vec![NameWithTypeQualifier::new_unqualified("N")],
+                    vec![
+                        // IF N <= 1 THEN
+                        Statement::IfBlock(IfBlock::new_if_else(
+                            // N <= 1
+                            Expression::lte(
+                                Expression::variable_name_unqualified("N"),
+                                Expression::IntegerLiteral(1)
+                            ),
+                            // Fib = N
+                            vec![Statement::Assignment(
+                                NameWithTypeQualifier::new_unqualified("Fib"),
+                                Expression::variable_name_unqualified("N")
+                            )],
+                            // ELSE Fib = Fib(N - 1) + Fib(N - 2)
+                            vec![Statement::Assignment(
+                                NameWithTypeQualifier::new_unqualified("Fib"),
+                                Expression::plus(
+                                    Expression::FunctionCall(
+                                        "Fib".to_string(),
+                                        vec![Expression::minus(
+                                            Expression::variable_name_unqualified("N"),
+                                            Expression::IntegerLiteral(1)
+                                        )]
+                                    ),
+                                    Expression::FunctionCall(
+                                        "Fib".to_string(),
+                                        vec![Expression::minus(
+                                            Expression::variable_name_unqualified("N"),
+                                            Expression::IntegerLiteral(2)
+                                        )]
+                                    )
+                                )
+                            )]
+                        ))
+                    ]
+                )
+            ]
+        );
     }
 }

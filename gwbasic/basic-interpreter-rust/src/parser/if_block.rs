@@ -20,6 +20,16 @@ pub struct IfBlock {
     else_block: Option<Block>,
 }
 
+impl IfBlock {
+    pub fn new_if_else(condition: Expression, if_block: Block, else_block: Block) -> IfBlock {
+        IfBlock {
+            if_block: ConditionalBlock::new(condition, if_block),
+            else_if_blocks: vec![],
+            else_block: Some(else_block)
+        }
+    }
+}
+
 impl<T: BufRead> Parser<T> {
     pub fn try_parse_if_block(&mut self) -> Result<Option<Statement>> {
         if self.buf_lexer.try_consume_word("IF")? {

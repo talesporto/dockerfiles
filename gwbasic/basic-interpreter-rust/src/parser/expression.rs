@@ -53,6 +53,26 @@ impl Expression {
             _ => Err(format!("Expected variable name, was {:?}", self)),
         }
     }
+
+    pub fn binary(operand: Operand, left: Expression, right: Expression) -> Expression {
+        Expression::BinaryExpression(
+            operand,
+            Box::new(left),
+            Box::new(right)
+        )
+    }
+
+    pub fn lte(left: Expression, right: Expression) -> Expression {
+        Expression::binary(Operand::LessOrEqualThan, left, right)
+    }
+
+    pub fn plus(left: Expression, right: Expression) -> Expression {
+        Expression::binary(Operand::Plus, left, right)
+    }
+
+    pub fn minus(left: Expression, right: Expression) -> Expression {
+        Expression::binary(Operand::Minus, left, right)
+    }
 }
 
 impl<T: BufRead> Parser<T> {
