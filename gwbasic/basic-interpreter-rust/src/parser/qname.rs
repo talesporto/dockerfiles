@@ -14,8 +14,8 @@ pub enum TypeQualifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NameWithTypeQualifier {
-    name: String,
-    type_qualifier: TypeQualifier,
+    pub name: String,
+    pub type_qualifier: TypeQualifier,
 }
 
 impl NameWithTypeQualifier {

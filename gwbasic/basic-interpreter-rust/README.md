@@ -8,3 +8,7 @@
 - Be able to cross-compile to Rust
 - Unit tests, with code coverage
 - VS Code debugging
+
+## Development
+
+Tip: run tests continuously with `nodemon -e rs -x "cargo test"`.

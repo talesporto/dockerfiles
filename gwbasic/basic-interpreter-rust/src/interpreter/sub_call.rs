@@ -1,6 +1,7 @@
+use super::context::ReadWriteContext;
+use super::context::Variant;
 use super::Interpreter;
 use super::Stdlib;
-use super::context::Variant;
 use crate::common::Result;
 use crate::parser::Expression;
 use std::io::BufRead;
@@ -28,29 +29,16 @@ impl<T: BufRead, TStdlib: Stdlib> Interpreter<T, TStdlib> {
         Ok(())
     }
 
-    fn _do_print_map_arg(&self, arg: &Expression) -> Result<String> {
-        match arg {
-            Expression::StringLiteral(s) => Ok(format!("{}", s)),
-            Expression::VariableName(v) => {
-                let var_name = v.name();
-                self._do_print_variant(self.context.get_variable(&var_name)?)
-            }
-            _ => Err(format!("Cannot format argument {:?}", arg)),
-        }
-    }
-
-    fn _do_print_variant(&self, v: Variant) -> Result<String> {
-        match v {
-            Variant::VString(s) => Ok(s),
-            Variant::VNumber(n) => Ok(format!("{}", n)),
-        }
+    fn _do_print_map_arg(&mut self, arg: &Expression) -> Result<String> {
+        let evaluated = self.evaluate_expression_as_str(arg)?;
+        Ok(format!("{}", evaluated))
     }
 
     fn _do_input(&mut self, args: &Vec<Expression>) -> Result<()> {
         for a in args {
             let variable_name = a.try_to_variable_name()?;
             let variable_value = self.stdlib.input()?;
-            self.context.set_variable(variable_name, Variant::VString(variable_value))?;
+            self.set_variable(variable_name, Variant::VString(variable_value))?;
         }
         Ok(())
     }

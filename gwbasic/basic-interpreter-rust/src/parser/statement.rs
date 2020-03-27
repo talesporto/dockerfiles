@@ -3,7 +3,7 @@ use crate::common::Result;
 use std::io::BufRead;
 use super::if_block::IfBlock;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     SubCall(String, Vec<Expression>),
     ForLoop(

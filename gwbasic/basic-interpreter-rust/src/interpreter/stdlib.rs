@@ -30,7 +30,7 @@ impl Stdlib for DefaultStdlib {
     fn input(&self) -> Result<String> {
         let mut line = String::new();
         match std::io::stdin().read_line(&mut line) {
-            Ok(_) => Ok(line),
+            Ok(_) => Ok(line.trim_end().to_string()),
             Err(x) => Err(format!("Could not read line: {}", x)),
         }
     }

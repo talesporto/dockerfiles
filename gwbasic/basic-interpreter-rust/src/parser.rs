@@ -13,6 +13,7 @@ mod statement;
 mod sub_call;
 
 pub use self::expression::*;
+pub use self::if_block::*;
 pub use self::qname::*;
 pub use self::statement::*;
 

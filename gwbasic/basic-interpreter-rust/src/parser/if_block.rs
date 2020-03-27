@@ -1,10 +1,10 @@
 use super::*;
 use std::io::BufRead;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConditionalBlock {
-    condition: Expression,
-    block: Block,
+    pub condition: Expression,
+    pub block: Block,
 }
 
 impl ConditionalBlock {
@@ -13,11 +13,11 @@ impl ConditionalBlock {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IfBlock {
-    if_block: ConditionalBlock,
-    else_if_blocks: Vec<ConditionalBlock>,
-    else_block: Option<Block>,
+    pub if_block: ConditionalBlock,
+    pub else_if_blocks: Vec<ConditionalBlock>,
+    pub else_block: Option<Block>,
 }
 
 impl IfBlock {
