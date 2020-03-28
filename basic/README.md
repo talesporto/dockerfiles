@@ -1,4 +1,4 @@
-# GW-Basic in Docker
+# GW-Basic and QBasic in Docker
 
 Based on my original blog post [here](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
