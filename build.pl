@@ -254,7 +254,7 @@ sub hub_set_description {
 
     my $ua = LWP::UserAgent->new;
     my $res = $ua->request($req);
-    if (!$res->is_success && res->code != 404) {
+    if (!$res->is_success && $res->code != 404) {
         die "Could not set description: ", $res->status_line;
     }
 }
