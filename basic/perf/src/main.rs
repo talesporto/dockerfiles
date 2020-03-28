@@ -103,7 +103,7 @@ fn current_dir_as_msys_path() -> String {
 fn build_image(args: &Args) {
     println!("Building Docker image");
     let output = Command::new("docker")
-        .args(&["build", "-t", "gwbasic", "-f", "Dockerfile.standalone", "."])
+        .args(&["build", "-t", "basic", "-f", "Dockerfile.standalone", "."])
         .stdout(if args.quiet {
             Stdio::piped()
         } else {
@@ -132,7 +132,7 @@ fn run_docker_outside(args: &Args) {
         &src_volume_spec,
         "-e",
         &basic_mode,
-        "gwbasic",
+        "basic",
         program,
     ];
     let output = Command::new("docker")
@@ -189,7 +189,7 @@ fn docker_inside_experiment(args: &Args) -> f64 {
         &basic_mode,
         "--entrypoint",
         "bash",
-        "gwbasic",
+        "basic",
         "/usr/local/perf/bin/perf-inside.sh",
         &fmt_count,
     ];
@@ -219,7 +219,7 @@ fn build_httpd_image(args: &Args) {
         .args(&[
             "build",
             "-t",
-            "gwbasic-httpd",
+            "basic-httpd",
             "-f",
             "Dockerfile.httpd",
             ".",
@@ -253,7 +253,7 @@ fn start_httpd(args: &Args) {
         "--rm",
         "-d",
         "--name",
-        "gwbasic-httpd",
+        "basic-httpd",
         "-p",
         "8080:80",
         "-e",
@@ -262,7 +262,7 @@ fn start_httpd(args: &Args) {
         &bin_volume_spec,
         "-v",
         &src_volume_spec,
-        "gwbasic-httpd",
+        "basic-httpd",
     ];
     let output = Command::new("docker")
         .args(run_args)
@@ -283,7 +283,7 @@ fn start_httpd(args: &Args) {
 fn stop_httpd(args: &Args) {
     println!("Stopping HTTPD");
     let output = Command::new("docker")
-        .args(&["stop", "gwbasic-httpd"])
+        .args(&["stop", "basic-httpd"])
         .stdout(if args.quiet {
             Stdio::piped()
         } else {

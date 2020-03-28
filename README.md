@@ -40,11 +40,11 @@ Docker images that include helm, kubectl, and terraform.
 [ruby-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/ruby-helm-kubectl-terraform/
 [swagger-to-diagram]: https://hub.docker.com/r/ngeor/swagger-to-diagram/
 
-## gwbasic
+## basic
 
 Docker images that launch GW-Basic and QBasic using DOSBox.
 
-See the  [related README](https://github.com/ngeor/dockerfiles/tree/master/gwbasic) for more information.
+See the [related README](https://github.com/ngeor/dockerfiles/tree/master/basic) for more information.
 
 ## dockerv
 

@@ -115,17 +115,17 @@ sub process {
             description => "FTPS image based on vsftpd"
         },
         {
-            folder => "gwbasic",
+            folder => "basic",
             images => [
                 {
                     file        => "Dockerfile.standalone",
-                    description => "Launch GW-Basic with DOSBox",
-                    name        => "gwbasic",
+                    description => "Launch GW-Basic or QBasic with DOSBox",
+                    name        => "basic",
                 },
                 {
                     file        => "Dockerfile.httpd",
-                    description => "Apache HTTPD with GW-Basic as cgi-bin",
-                    name        => "gwbasic-httpd",
+                    description => "Apache HTTPD with GW-Basic or QBasic as cgi-bin",
+                    name        => "basic-httpd",
                 }
             ]
         },

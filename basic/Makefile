@@ -1,7 +1,7 @@
 .PHONY: all run-perf perf docker-build-standalone docker-build-httpd clean
 
 # TODO fix hardcoded unix PWD
-PWD_UNIX = /c/Users/ngeor/Projects/github/dockerfiles/gwbasic
+PWD_UNIX = /c/Users/ngeor/Projects/github/dockerfiles/basic
 
 # Location of binaries
 GWBASIC_EXE = ./bin/GWBASIC.EXE
@@ -44,10 +44,10 @@ $(PERF_EXE): perf/src/main.rs perf/Cargo.toml
 #
 
 build-docker-standalone: build-launcher
-	docker build -t gwbasic -f Dockerfile.standalone .
+	docker build -t basic -f Dockerfile.standalone .
 
 build-docker-httpd: build-launcher
-	docker build -t gwbasic-httpd -f Dockerfile.httpd .
+	docker build -t basic-httpd -f Dockerfile.httpd .
 
 clean:
 	rm -rf perf/target
@@ -60,29 +60,29 @@ run-hello-dos-qb: build-launcher
 	BLR_QBASIC=$(QBASIC_EXE) $(LAUNCHER_EXE) ./src/HELLOQB.BAS
 
 run-hello-docker: build-docker-standalone
-	docker.exe run --rm -v $(PWD_UNIX)/src:/basic/src -v $(PWD_UNIX)/bin:/basic/bin gwbasic HELLO.BAS
+	docker.exe run --rm -v $(PWD_UNIX)/src:/basic/src -v $(PWD_UNIX)/bin:/basic/bin basic HELLO.BAS
 
 run-hello-docker-qb: build-docker-standalone
-	docker.exe run --rm -v $(PWD_UNIX)/src:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -e BLR_BASIC_MODE=qbasic gwbasic HELLOQB.BAS
+	docker.exe run --rm -v $(PWD_UNIX)/src:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -e BLR_BASIC_MODE=qbasic basic HELLOQB.BAS
 
 run-httpd: build-docker-httpd
-	docker run --rm -d --name gwbasic-httpd -v $(PWD_UNIX)/rest:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 gwbasic-httpd
+	docker run --rm -d --name basic-httpd -v $(PWD_UNIX)/rest:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 basic-httpd
 	curl http://localhost:8080/api/todo
 	curl --data "Hello world" -H "Content-Type: text/plain" http://localhost:8080/api/todo
 	curl http://localhost:8080/api/todo
-	docker stop gwbasic-httpd
+	docker stop basic-httpd
 
 run-httpd-qb: build-docker-httpd
-	docker run --rm -d --name gwbasic-httpd -v $(PWD_UNIX)/rest-qb:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 gwbasic-httpd
+	docker run --rm -d --name basic-httpd -v $(PWD_UNIX)/rest-qb:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 basic-httpd
 	curl -v http://localhost:8080/api/todo
 	curl -v --data "Hello world" -H "Content-Type: text/plain" http://localhost:8080/api/todo
 	curl -v http://localhost:8080/api/todo
-	docker stop gwbasic-httpd
+	docker stop basic-httpd
 
 start-httpd-foreground: build-docker-httpd
-	docker run -e BLR_NO_CLEANUP=1 --rm --name gwbasic-httpd -v $(PWD_UNIX)/rest:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 gwbasic-httpd
+	docker run -e BLR_NO_CLEANUP=1 --rm --name basic-httpd -v $(PWD_UNIX)/rest:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 basic-httpd
 
 start-httpd-foreground-qb: build-docker-httpd
-	docker run -e BLR_NO_CLEANUP=1 --rm --name gwbasic-httpd -v $(PWD_UNIX)/rest-qb:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 gwbasic-httpd
+	docker run -e BLR_NO_CLEANUP=1 --rm --name basic-httpd -v $(PWD_UNIX)/rest-qb:/basic/src -v $(PWD_UNIX)/bin:/basic/bin -p 8080:80 basic-httpd
 
 test: run-hello-dos run-hello-dos-qb run-hello-docker run-hello-docker-qb run-httpd run-httpd-qb

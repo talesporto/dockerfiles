@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v0.5.0-basic]
+
+### Changed
+
+Renamed `gwbasic` image and folder to `basic`, as it supports not only GW-Basic
+but also QBasic.
+
 ## [v0.1.0-dockerv]
 
 ### Added
@@ -83,7 +90,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - New GW-Basic dockerfile, as appeared in my
   [related blogpost](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
-[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-dockerv...HEAD
+[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.5.0-basic...HEAD
+[v0.5.0-basic]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-dockerv...v0.5.0-basic
 [v0.1.0-dockerv]: https://github.com/ngeor/dockerfiles/compare/v0.4.0-gwbasic...v0.1.0-dockerv
 [v0.4.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...v0.4.0-gwbasic
 [v0.3.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-gwbasic...v0.3.0-gwbasic

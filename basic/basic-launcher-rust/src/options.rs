@@ -231,7 +231,7 @@ mod tests {
         env::remove_var(EV_GWBASIC);
         assert_eq!(
             b.0.display().to_string(),
-            "\\\\?\\C:\\Users\\ngeor\\Projects\\github\\dockerfiles\\gwbasic\\bin\\GWBASIC.EXE"
+            "\\\\?\\C:\\Users\\ngeor\\Projects\\github\\dockerfiles\\basic\\bin\\GWBASIC.EXE"
         );
         assert!(match b.1 {
             BasicMode::GWBasic => true,
