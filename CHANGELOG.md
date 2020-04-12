@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [v0.2.0-basic-interpreter]
+
+Reached [milestone v0.2.0](https://github.com/ngeor/dockerfiles/milestone/3) of
+basic interpreter, which means that the interpreter can run a
+[program that prints out the Fibonacci numbers](https://github.com/ngeor/dockerfiles/blob/v0.2.0-basic-interpreter/basic/basic-interpreter-rust/fixtures/FIB.BAS).
+
 ## [v0.5.0-basic]
 
 ### Changed
@@ -90,7 +96,8 @@ but also QBasic.
 - New GW-Basic dockerfile, as appeared in my
   [related blogpost](https://ngeor.com/2020/02/22/gwbasic-in-docker.html)
 
-[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.5.0-basic...HEAD
+[unreleased]: https://github.com/ngeor/dockerfiles/compare/v0.2.0-basic-interpreter...HEAD
+[v0.2.0-basic-interpreter]: https://github.com/ngeor/dockerfiles/compare/v0.5.0-basic...v0.2.0-basic-interpreter
 [v0.5.0-basic]: https://github.com/ngeor/dockerfiles/compare/v0.1.0-dockerv...v0.5.0-basic
 [v0.1.0-dockerv]: https://github.com/ngeor/dockerfiles/compare/v0.4.0-gwbasic...v0.1.0-dockerv
 [v0.4.0-gwbasic]: https://github.com/ngeor/dockerfiles/compare/v0.3.0-gwbasic...v0.4.0-gwbasic
