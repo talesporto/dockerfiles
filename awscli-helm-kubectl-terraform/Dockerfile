@@ -1,4 +1,4 @@
-FROM python:alpine
+FROM python:3.8-alpine
 
 # TAG PATTERN: aws-version__helm-version__kubectl-version__terraform-version
 # awscli-helm-kubectl-terraform:1.14.44__2.14.3__1.13.10__0.12.20
