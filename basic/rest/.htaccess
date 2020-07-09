@@ -1,0 +1,16 @@
+RewriteEngine on
+
+RewriteCond "%{REQUEST_METHOD}" "GET"
+RewriteRule "^todo$" "/cgi-bin/LIST.BAS"
+
+RewriteCond "%{REQUEST_METHOD}" "POST"
+RewriteRule "^todo$" "/cgi-bin/CREATE.BAS"
+
+RewriteCond "%{REQUEST_METHOD}" "GET"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/READ.BAS?id=$1"
+
+RewriteCond "%{REQUEST_METHOD}" "POST"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/UPDATE.BAS?id=$1"
+
+RewriteCond "%{REQUEST_METHOD}" "DELETE"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/DELETE.BAS?id=$1"

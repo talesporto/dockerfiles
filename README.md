@@ -1,6 +1,24 @@
 # dockerfiles
 
-A home for my various custom Docker images
+> A home for my various custom Docker images.
+
+[![Build Status](https://travis-ci.org/ngeor/dockerfiles.svg?branch=master)](https://travis-ci.org/ngeor/dockerfiles)
+
+## Images
+
+| Image                           | Base image                  | Main features                    | Extra                                                     | Pulls                                                                                        |
+| ------------------------------- | --------------------------- | -------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [awscli]                        | Python alpine               | AWS CLI, zip, git                | zip, git                                                  | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/awscli.svg)                        |
+| [awscli-terraform]              | Python alpine               | AWS CLI, terraform               | zip, git, ca-certificates, openssl                        | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/awscli-terraform.svg)              |
+| [az-helm-kubectl-terraform]     | Azure CLI                   | kubectl, helm, terraform         | bash, curl, git, ca-certificates, initialized helm client | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/az-helm-kubectl-terraform.svg)     |
+| [helm-kubectl-terraform]        | Alpine                      | kubectl, helm, terraform         | bash, curl, git, ca-certificates, initialized helm client | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/helm-kubectl-terraform.svg)        |
+| [jdk-helm-kubectl-terraform]    | Maven 3.6 JDK 11 slim       | kubectl, helm, terraform         | unzip, ant, gradle, initialized helm client               | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/jdk-helm-kubectl-terraform.svg)    |
+| [maven-awscli]                  | Maven 3.6 JDK 11 slim       | AWS CLI                          | python, pip, nc                                           | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/maven-awscli.svg)                  |
+| [node-chrome]                   | Alpeware Chrome Headless 77 | nodeJS 10                        | curl, build-essential                                     | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/node-chrome.svg)                   |
+| [node-firefox]                  | nodeJS 10 Jessie            | Firefox                          |                                                           | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/node-firefox.svg)                  |
+| [python-helm-kubectl-terraform] | Python alpine               | kubectl, helm, terraform         | bash, curl, git, ca-certificates, initialized helm client | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/python-helm-kubectl-terraform.svg) |
+| [ruby-helm-kubectl-terraform]   | Ruby 2.5.3 alpine           | kubectl, helm, terraform         | bash, curl, git, ca-certificates, initialized helm client | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/ruby-helm-kubectl-terraform.svg)   |
+| [swagger-to-diagram]            | OpenJDK JRE 11 slim         | custom swagger to diagram script | curl, python, graphviz                                    | ![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/swagger-to-diagram.svg)            |
 
 ## \*-helm-kubectl-terraform
 
@@ -8,59 +26,40 @@ Docker images that include helm, kubectl, and terraform.
 
 - Inspired by [dtzar/helm-kubectl](https://github.com/dtzar/helm-kubectl)
 - Includes `terraform`
+- Current versions: `kubectl` v1.17.0, `helm` v2.16.1, `terraform` 0.12.18
 
-### Tags
+[awscli]: https://hub.docker.com/r/ngeor/awscli/
+[awscli-terraform]: https://hub.docker.com/r/ngeor/awscli-terraform/
+[az-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/az-helm-kubectl-terraform/
+[helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/helm-kubectl-terraform/
+[jdk-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/jdk-helm-kubectl-terraform/
+[maven-awscli]: https://hub.docker.com/r/ngeor/maven-awscli/
+[node-chrome]: https://hub.docker.com/r/ngeor/node-chrome/
+[node-firefox]: https://hub.docker.com/r/ngeor/node-firefox/
+[python-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/python-helm-kubectl-terraform/
+[ruby-helm-kubectl-terraform]: https://hub.docker.com/r/ngeor/ruby-helm-kubectl-terraform/
+[swagger-to-diagram]: https://hub.docker.com/r/ngeor/swagger-to-diagram/
 
-The tag scheme is a bit complex because of the multiple packages.
+## basic
 
-`helm-version__kubectl-version__terraform-version`
+Docker images that launch GW-Basic and QBasic using DOSBox.
 
-e.g.
+See the [related README](https://github.com/ngeor/dockerfiles/tree/master/basic) for more information.
 
-`2.8.2__0.11.3__0.11.0`
+## dockerv
 
-### helm-kubectl-terraform
+A utility for easier working with Docker volumes on Windows 10 Home.
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/helm-kubectl-terraform.svg)](https://hub.docker.com/r/ngeor/helm-kubectl-terraform/)
+See the [related README](https://github.com/ngeor/dockerfiles/tree/master/dockerv) for more information.
 
-Based on alpine.
+## Building and releasing
 
-### helm-kubectl-terraform
+To avoid rebuilding everything, images will only be built if:
 
-| Name                                           | helm    | kubectl | terraform |
-| ---------------------------------------------- | ------- | ------- | --------- |
-| helm-kubectl-terraform:2.12.3**1.12.4**0.11.11 | v2.12.3 | v1.12.4 | 0.11.11   |
+- their folder has changes
+- there is a tag in the format of `vX.Y.Z-folder`
 
-### jdk-helm-kubectl-terraform
+If an image is built, it will be released when:
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/jdk-helm-kubectl-terraform.svg)](https://hub.docker.com/r/ngeor/jdk-helm-kubectl-terraform/)
-
-Based on `maven:3.6-jdk-11-slim`. Includes ant and gradle.
-
-| Name                                               | helm    | kubectl | terraform |
-| -------------------------------------------------- | ------- | ------- | --------- |
-| jdk-helm-kubectl-terraform:2.12.3**1.12.4**0.11.11 | v2.12.3 | v1.12.4 | 0.11.11   |
-
-### python-helm-kubectl-terraform
-
-[![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/python-helm-kubectl-terraform.svg)](https://hub.docker.com/r/ngeor/python-helm-kubectl-terraform/)
-
-Based on python:alpine
-
-### python-helm-kubectl-terraform
-
-| Name                                                  | helm    | kubectl | terraform |
-| ----------------------------------------------------- | ------- | ------- | --------- |
-| python-helm-kubectl-terraform:2.12.3**1.12.4**0.11.11 | v2.12.3 | v1.12.4 | 0.11.11   |
-
-### ruby-helm-kubectl-terraform
-
-[![Docker Pulls](https://img.shields.io/docker/pulls/ngeor/ruby-helm-kubectl-terraform.svg)](https://hub.docker.com/r/ngeor/ruby-helm-kubectl-terraform/)
-
-Based on ruby:2.5.3-alpine
-
-### ruby-helm-kubectl-terraform
-
-| Name                                                | helm    | kubectl | terraform |
-| --------------------------------------------------- | ------- | ------- | --------- |
-| ruby-helm-kubectl-terraform:2.12.3**1.12.4**0.11.11 | v2.12.3 | v1.12.4 | 0.11.11   |
+- building on the master branch, in which case it is tagged as `latest`
+- building on a tag `vX.Y.Z-folder`, in which case it is tagged as `vX.Y.Z`

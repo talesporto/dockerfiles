@@ -1,0 +1,41 @@
+FROM rust AS builder
+
+WORKDIR /usr/src/myapp
+COPY basic-launcher-rust/ ./
+RUN cargo install --path .
+
+FROM ubuntu
+RUN apt-get update \
+  && apt-get install -y dosbox \
+  && rm -rf /var/lib/apt/lists/*
+
+# Folder structure
+# /
+# |- basic <- common ancestor (batch file)
+#    |
+#    |- bin <- GWBASIC.EXE lives here, volume
+#    |- src <- BAS files live here, volume
+
+RUN mkdir -p /basic/bin && mkdir -p /basic/src
+
+VOLUME [ "/basic/bin" ]
+VOLUME [ "/basic/src" ]
+
+ENV BLR_DOSBOX=dosbox
+ENV BLR_DOSBOX_CONF=/etc/dosbox.conf
+ENV BLR_GWBASIC=/basic/bin/GWBASIC.EXE
+ENV BLR_QBASIC=/basic/bin/QBASIC.EXE
+ENV BLR_BASIC_MODE=
+ENV BLR_NO_CLEANUP=
+
+COPY --from=builder /usr/local/cargo/bin/basic-launcher-rust /usr/local/bin/
+COPY dosbox.conf /etc/dosbox.conf
+
+#
+# The following is specific to the standalone image
+#
+
+# So that HELLO.BAS without a path is in the correct folder
+WORKDIR /basic/src
+
+ENTRYPOINT ["/usr/local/bin/basic-launcher-rust"]

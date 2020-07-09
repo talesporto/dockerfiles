@@ -1,0 +1,40 @@
+10 ON ERROR GOTO 2000
+20 METHOD$ = ENVIRON$("REQUEST_METHOD")
+30 IF METHOD$ <> "POST" GOTO 200
+
+40 CT$ = ENVIRON$("CONTENT_TYPE")
+50 IF CT$ <> "text/plain" GOTO 300
+
+60 OPEN ENVIRON$("STDIN") FOR INPUT ACCESS READ AS #1
+70 IF EOF(1) GOTO 90
+80 LINE INPUT #1, T$
+90 CLOSE #1
+100 IF LEN(T$) <= 0 GOTO 400
+110 OPEN "TODO.DAT" FOR APPEND AS #1
+120 PRINT #1, T$
+130 CLOSE #1
+
+140 PRINT "Status: 201 Created"
+150 PRINT "Content-Type: text/plain"
+160 PRINT "X-Powered-By: GW-BASIC"
+170 PRINT ""
+180 PRINT "Processed ", T$
+190 GOTO 500
+
+200 PRINT "Status: 405 Method not allowed, send POST"
+210 PRINT ""
+220 GOTO 500
+
+300 PRINT "Status: 415 Unsupported media type, I only speak text/plain"
+310 PRINT ""
+320 GOTO 500
+
+400 PRINT "Status: 400 Bad request, give me one todo item"
+410 PRINT ""
+420 GOTO 500
+
+500 SYSTEM
+
+2000 PRINT "Status: 500 Internal Server Error"
+2010 PRINT ""
+2020 ON ERROR GOTO 0

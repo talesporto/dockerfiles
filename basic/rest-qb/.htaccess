@@ -1,0 +1,18 @@
+SetEnv BLR_BASIC_MODE qbasic
+
+RewriteEngine on
+
+RewriteCond "%{REQUEST_METHOD}" "GET"
+RewriteRule "^todo$" "/cgi-bin/TODO.BAS?action=list"
+
+RewriteCond "%{REQUEST_METHOD}" "POST"
+RewriteRule "^todo$" "/cgi-bin/TODO.BAS?action=create"
+
+RewriteCond "%{REQUEST_METHOD}" "GET"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/TODO.BAS?id=$1&action=read"
+
+RewriteCond "%{REQUEST_METHOD}" "POST"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/TODO.BAS?id=$1&action=update"
+
+RewriteCond "%{REQUEST_METHOD}" "DELETE"
+RewriteRule "^todo/([0-9]+)$" "/cgi-bin/TODO.BAS?id=$1?action=delete"

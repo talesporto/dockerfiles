@@ -1,4 +1,4 @@
-# docker-vsftpd
+# vsftpd
 
 FTPS images based on vsftpd.
 
